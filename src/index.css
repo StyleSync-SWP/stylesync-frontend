@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", "Helvetica Neue", serif;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/DMSans_18pt-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/DMSans_18pt-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/DMSans_18pt-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+input:-webkit-autofill {
+  box-shadow: 0 0 0px 1000px oklch(95.4% 0.038 75.164) inset !important;
+  -webkit-text-fill-color: #000 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+input.autofill-green:-webkit-autofill {
+  box-shadow: 0 0 0px 1000px #d1fae5 inset !important;
+}
+
+input.autofill-red:-webkit-autofill {
+  box-shadow: 0 0 0px 1000px #ffe2e2 inset !important;
+}
+
+@layer base {
+  * {
+    font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+}
+
+@keyframes star-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1.25);
+  }
+}
+
+.animate-star-pop {
+  animation: star-pop 0.3s ease-out;
+}

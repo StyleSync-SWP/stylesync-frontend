@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+@layer components {
+  .btn-primary {
+    @apply relative flex justify-center w-full px-4 py-2 border border-transparent rounded-md hover:cursor-pointer;
+  }
+
+  .btn-primary-blue {
+    @apply text-white bg-[#273F4F] hover:bg-[#717B82] disabled:bg-[#B6B6B6];
+  }
+
+  .btn-primary-orange {
+    @apply text-black bg-[#FE7743] hover:bg-[#FC9D78] disabled:bg-[#B6B6B6];
+  }
+
+  .input {
+    @apply relative block w-full px-3 py-2 border border-gray-100 rounded-lg appearance-none focus:outline-none focus:z-10 sm:text-sm;
+  }
+
+  .input-error {
+    @apply bg-red-100 border-red-700;
+  }
+
+  .input-confirm {
+    @apply bg-green-100 border-green-600;
+  }
+
+  .input-active {
+    @apply bg-orange-100 border-orange-300 focus:border-orange-300 focus:ring-2 focus:ring-orange-300 focus:bg-orange-100;
+  }
+
+  .input-idle {
+    @apply bg-gray-100 focus:border-orange-300 focus:ring-2 focus:ring-orange-300 focus:bg-orange-100;
+  }
+}
