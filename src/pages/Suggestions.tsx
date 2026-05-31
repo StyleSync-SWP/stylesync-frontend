@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { wardrobeApi } from "../services/wardrobeApi";
-import { outfitApi } from "../services/outfitApi";
+import { outfitApi, type OutfitSuggestPayload } from "../services/outfitApi";
 import Menu from "../components/Menu";
 import {
   IoArrowBack,
@@ -48,6 +48,22 @@ const COLORS = [
   { label: "Beige", bg: "bg-amber-100", border: "border-amber-300" },
 ];
 
+const OCCASION_OPTIONS = [
+  "Casual", "Office", "Party", "Sport", "Beach",
+  "Evening", "Outdoor", "Date Night",
+];
+
+const STYLE_OPTIONS = [
+  { label: "Casual",     value: "casual" },
+  { label: "Minimalist", value: "minimalist" },
+  { label: "Elegant",    value: "elegant" },
+  { label: "Bohemian",   value: "bohemian" },
+  { label: "Sport",      value: "sport" },
+  { label: "Streetwear", value: "streetwear" },
+  { label: "Formal",     value: "formal" },
+  { label: "Romantic",   value: "romantic" },
+];
+
 export default function Suggestions() {
   const navigate = useNavigate();
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -87,12 +103,13 @@ export default function Suggestions() {
   const [dropdownValues, setDropdownValues] = useState({
     occasion: "",
     style: "",
-    weather: "",
   });
-  const [suggestedOutfit, setSuggestedOutfit] =
-    useState<SuggestedOutfit | null>(null);
+  const [suggestedOutfit, setSuggestedOutfit] = useState<SuggestedOutfit | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
+
+  const [outfitPool, setOutfitPool] = useState<any[]>([]);
+  const [poolIndex, setPoolIndex] = useState(0);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -123,14 +140,12 @@ export default function Suggestions() {
         reader.onload = async (e) => {
           try {
             const base64Image = e.target?.result as string;
-
             const newGarment = await wardrobeApi.addGarment({
               name: file.name.split(".")[0],
               image_base64: base64Image,
               brand: "Unknown",
               code: "",
             });
-
             const newClothing: ClothingItem = {
               id: newGarment.id,
               name: newGarment.name,
@@ -139,7 +154,6 @@ export default function Suggestions() {
               category: newGarment.category || "Uncategorized",
               image: newGarment.image_base64,
             };
-
             setWardrobeItems((prev) => [...prev, newClothing]);
             setSelectedClothes((prev) => [...prev, newClothing]);
           } catch (err) {
@@ -151,7 +165,6 @@ export default function Suggestions() {
         reader.readAsDataURL(file);
       });
     }
-
     setIsUploadModalOpen(false);
   };
 
@@ -163,51 +176,67 @@ export default function Suggestions() {
     }
   };
 
-  const handleSubmit = async () => {
+  const buildPayload = (): OutfitSuggestPayload => {
+    if (inputMode === "text") {
+      return {
+        query: textInput + (selectedColors.length > 0 ? ` Preferred colors: ${selectedColors.join(", ")}.` : ""),
+        explicit_filters: null,
+      };
+    }
+    return {
+      query: "",
+      explicit_filters: {
+        occasions: dropdownValues.occasion ? [dropdownValues.occasion] : [],
+        styles: dropdownValues.style ? [dropdownValues.style] : [],
+        colors: selectedColors.map((c) => c.toLowerCase()),
+      },
+    };
+  };
+
+  const mapOutfit = (raw: any): SuggestedOutfit => {
+    const items = (raw.garment_ids || [])
+      .map((id: string) => wardrobeItems.find((w) => w.id === id))
+      .filter(Boolean) as ClothingItem[];
+    return {
+      id: raw.id,
+      items,
+      description: raw.prompt,
+      rating: raw.rating || 0,
+      confidence: Math.floor(Math.random() * 8) + 88,
+    };
+  };
+
+  const fetchPool = async () => {
     setIsLoading(true);
     try {
-      const colorPart =
-        selectedColors.length > 0
-          ? ` Preferred colors: ${selectedColors.join(", ")}.`
-          : "";
-
-      const query = textInput
-        ? `${textInput}${colorPart}`
-        : `A ${dropdownValues.style} outfit for ${dropdownValues.occasion} in ${dropdownValues.weather} weather.${colorPart}`;
-
-      const response = await outfitApi.suggestOutfit(query);
-
-      const items = (response.garment_ids || [])
-        .map((id: string) => wardrobeItems.find((w) => w.id === id))
-        .filter(Boolean) as ClothingItem[];
-
-      setSuggestedOutfit({
-        id: response.id,
-        items,
-        description: response.prompt,
-        rating: response.rating || 0,
-        confidence: 95,
-      });
+      const response = await outfitApi.suggestOutfit(buildPayload());
+      const pool: any[] = Array.isArray(response) ? response : [response];
+      setOutfitPool(pool);
+      setPoolIndex(0);
+      if (pool.length > 0) {
+        setSuggestedOutfit(mapOutfit(pool[0]));
+      }
     } catch (err) {
       console.error("Failed to get suggestion", err);
+    } finally {
+      setIsLoading(false);
+      setUserRating(0);
     }
-    setIsLoading(false);
-    setUserRating(0);
+  };
+
+  const handleSubmit = async () => {
+    await fetchPool();
   };
 
   const handleTrySimilar = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setSuggestedOutfit({
-      ...suggestedOutfit!,
-      id: Date.now().toString(),
-      items: wardrobeItems.slice(1, 4),
-      description: "Here's a similar outfit with a different twist!",
-      rating: Math.floor(Math.random() * 3) + 7,
-      confidence: Math.floor(Math.random() * 20) + 80,
-    });
-    setIsLoading(false);
-    setUserRating(0);
+    const nextIndex = poolIndex + 1;
+    if (nextIndex < outfitPool.length) {
+      setPoolIndex(nextIndex);
+      setSuggestedOutfit(mapOutfit(outfitPool[nextIndex]));
+      setUserRating(0);
+      return;
+    }
+    await fetchPool();
   };
 
   const handleSaveOutfit = () => {
@@ -249,6 +278,8 @@ export default function Suggestions() {
         : `${border} opacity-70 hover:opacity-100`
     }`;
 
+  const remainingInPool = outfitPool.length - poolIndex - 1;
+
   return (
     <div className="bg-[#34020E] min-h-dvh">
       <Menu />
@@ -262,17 +293,12 @@ export default function Suggestions() {
           <span className="font-medium">Back to Dashboard</span>
         </button>
 
-        <h1 className="text-3xl font-bold text-white mb-6">
-          Outfit Suggestions
-        </h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Outfit Suggestions</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Section 1: Clothes Selection */}
           <div className="bg-gray-800 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Select Your Clothes
-            </h2>
-
+            <h2 className="text-xl font-bold text-white mb-4">Select Your Clothes</h2>
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setIsUploadModalOpen(true)}
@@ -298,11 +324,7 @@ export default function Suggestions() {
                   }`}
                 >
                   <div className="aspect-square bg-gray-700">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   </div>
                   {selectedClothes.find((c) => c.id === item.id) && (
                     <div className="absolute top-2 right-2 bg-[#FE7743] rounded-full p-1">
@@ -319,15 +341,10 @@ export default function Suggestions() {
 
             {selectedClothes.length > 0 && (
               <div className="mt-4 pt-4 border-t border-gray-700">
-                <h3 className="text-white text-sm font-medium mb-2">
-                  Selected Items:
-                </h3>
+                <h3 className="text-white text-sm font-medium mb-2">Selected Items:</h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedClothes.map((item) => (
-                    <span
-                      key={item.id}
-                      className="text-xs bg-[#273F4F] text-white px-2 py-1 rounded"
-                    >
+                    <span key={item.id} className="text-xs bg-[#273F4F] text-white px-2 py-1 rounded">
                       {item.name}
                     </span>
                   ))}
@@ -338,17 +355,13 @@ export default function Suggestions() {
 
           {/* Section 2: Input Section */}
           <div className="bg-gray-800 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Provide Your Preferences
-            </h2>
+            <h2 className="text-xl font-bold text-white mb-4">Provide Your Preferences</h2>
 
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setInputMode("text")}
                 className={`flex-1 py-2 rounded-lg font-medium transition-all ${
-                  inputMode === "text"
-                    ? "bg-[#FE7743] text-black"
-                    : "bg-gray-700 text-white hover:bg-gray-600"
+                  inputMode === "text" ? "bg-[#FE7743] text-black" : "bg-gray-700 text-white hover:bg-gray-600"
                 }`}
               >
                 <IoChatbubble className="inline mr-2" />
@@ -357,9 +370,7 @@ export default function Suggestions() {
               <button
                 onClick={() => setInputMode("dropdown")}
                 className={`flex-1 py-2 rounded-lg font-medium transition-all ${
-                  inputMode === "dropdown"
-                    ? "bg-[#FE7743] text-black"
-                    : "bg-gray-700 text-white hover:bg-gray-600"
+                  inputMode === "dropdown" ? "bg-[#FE7743] text-black" : "bg-gray-700 text-white hover:bg-gray-600"
                 }`}
               >
                 Dropdowns
@@ -380,29 +391,17 @@ export default function Suggestions() {
                 <div>
                   <label className="text-white block mb-2">Occasion</label>
                   <div className="flex flex-wrap gap-2">
-                    {[
-                      "Casual",
-                      "Formal",
-                      "Business",
-                      "Date Night",
-                      "Party",
-                      "Outdoor",
-                    ].map((option) => (
+                    {OCCASION_OPTIONS.map((option) => (
                       <button
                         key={option}
                         type="button"
                         onClick={() =>
                           setDropdownValues({
                             ...dropdownValues,
-                            occasion:
-                              dropdownValues.occasion === option.toLowerCase()
-                                ? ""
-                                : option.toLowerCase(),
+                            occasion: dropdownValues.occasion === option.toLowerCase() ? "" : option.toLowerCase(),
                           })
                         }
-                        className={pillBtn(
-                          dropdownValues.occasion === option.toLowerCase(),
-                        )}
+                        className={pillBtn(dropdownValues.occasion === option.toLowerCase())}
                       >
                         {option}
                       </button>
@@ -413,57 +412,19 @@ export default function Suggestions() {
                 <div>
                   <label className="text-white block mb-2">Style</label>
                   <div className="flex flex-wrap gap-2">
-                    {[
-                      "Minimalist",
-                      "Bold & Trendy",
-                      "Classic",
-                      "Bohemian",
-                      "Sporty",
-                      "Elegant",
-                    ].map((option) => (
+                    {STYLE_OPTIONS.map(({ label, value }) => (
                       <button
-                        key={option}
+                        key={value}
                         type="button"
                         onClick={() =>
                           setDropdownValues({
                             ...dropdownValues,
-                            style:
-                              dropdownValues.style === option.toLowerCase()
-                                ? ""
-                                : option.toLowerCase(),
+                            style: dropdownValues.style === value ? "" : value,
                           })
                         }
-                        className={pillBtn(
-                          dropdownValues.style === option.toLowerCase(),
-                        )}
+                        className={pillBtn(dropdownValues.style === value)}
                       >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-white block mb-2">Weather</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Hot", "Warm", "Cool", "Cold", "Rainy"].map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() =>
-                          setDropdownValues({
-                            ...dropdownValues,
-                            weather:
-                              dropdownValues.weather === option.toLowerCase()
-                                ? ""
-                                : option.toLowerCase(),
-                          })
-                        }
-                        className={pillBtn(
-                          dropdownValues.weather === option.toLowerCase(),
-                        )}
-                      >
-                        {option}
+                        {label}
                       </button>
                     ))}
                   </div>
@@ -479,17 +440,13 @@ export default function Suggestions() {
                         onClick={() => toggleColor(label)}
                         className={`flex items-center gap-1.5 ${pillBtn(selectedColors.includes(label), border)}`}
                       >
-                        <span
-                          className={`w-3 h-3 rounded-full ${bg} border border-white/20`}
-                        />
+                        <span className={`w-3 h-3 rounded-full ${bg} border border-white/20`} />
                         {label}
                       </button>
                     ))}
                   </div>
                   {selectedColors.length > 0 && (
-                    <p className="text-gray-400 text-xs mt-2">
-                      Selected: {selectedColors.join(", ")}
-                    </p>
+                    <p className="text-gray-400 text-xs mt-2">Selected: {selectedColors.join(", ")}</p>
                   )}
                 </div>
               </div>
@@ -519,14 +476,29 @@ export default function Suggestions() {
         {suggestedOutfit && !isLoading && (
           <div className="mt-6 bg-gray-800 rounded-xl p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-              <h2 className="text-xl font-bold text-white text-center md:text-left w-full md:w-auto">Suggested Outfit</h2>
-              <div className="flex flex-row md:flex-row gap-2 w-full md:w-auto">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-white">Suggested Outfit</h2>
+                {outfitPool.length > 1 && (
+                  <div className="flex gap-1.5 items-center">
+                    {outfitPool.map((_, i) => (
+                      <span
+                        key={i}
+                        className={`block rounded-full transition-all ${
+                          i === poolIndex ? "w-2.5 h-2.5 bg-[#FE7743]" : "w-2 h-2 bg-gray-600"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-row gap-2 w-full md:w-auto">
                 <button
                   onClick={handleTrySimilar}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  disabled={isLoading}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50"
                 >
                   <IoRefresh size={18} />
-                  Try Similar
+                  {remainingInPool > 0 ? `Try Similar (${remainingInPool} left)` : "Try Similar"}
                 </button>
                 <button
                   onClick={handleSaveOutfit}
@@ -568,20 +540,11 @@ export default function Suggestions() {
                 <h3 className="text-white font-medium mb-3">Items</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                   {suggestedOutfit.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="bg-gray-700 rounded-lg overflow-hidden"
-                    >
-                      <div className="aspect-square">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <p className="text-white text-xs p-2 truncate">
-                        {item.name}
-                      </p>
+                    <div key={index} className="bg-gray-700 rounded-lg overflow-hidden">
+                      <div className="aspect-square flex items-center justify-center">
+                        <img src={item.image} alt={item.name} className="w-full h-full object-contain" />
+                       </div>
+                      <p className="text-white text-xs p-2 truncate">{item.name}</p>
                     </div>
                   ))}
                 </div>
@@ -597,10 +560,7 @@ export default function Suggestions() {
           <div className="bg-[#34020E] rounded-2xl p-6 max-w-lg w-full">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-white">Upload Clothes</h2>
-              <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="text-white hover:text-[#FE7743]"
-              >
+              <button onClick={() => setIsUploadModalOpen(false)} className="text-white hover:text-[#FE7743]">
                 <IoClose size={24} />
               </button>
             </div>
@@ -614,27 +574,16 @@ export default function Suggestions() {
                 isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
               } ${dragActive ? "border-[#FE7743] bg-[#FE7743] bg-opacity-10" : "border-gray-600"}`}
             >
-              <IoCloudUploadOutline
-                size={48}
-                className="mx-auto text-gray-400 mb-4"
-              />
-              <p className="text-white mb-2">
-                Drag and drop your clothes images here
-              </p>
-              <p className="text-white text-sm mb-4">
-                or click anywhere to browse — you can select multiple files
-              </p>
-              <div className="btn-primary btn-primary-orange inline-block text-white">
-                Browse Files
-              </div>
+              <IoCloudUploadOutline size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-white mb-2">Drag and drop your clothes images here</p>
+              <p className="text-white text-sm mb-4">or click anywhere to browse — you can select multiple files</p>
+              <div className="btn-primary btn-primary-orange inline-block text-white">Browse Files</div>
               <input
                 type="file"
                 accept="image/*"
                 multiple
                 disabled={isLoading}
-                onChange={(e) =>
-                  e.target.files && handleFileUpload(e.target.files)
-                }
+                onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
                 className="hidden"
               />
             </label>
