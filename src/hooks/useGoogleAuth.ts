@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from "react";
 
 interface GoogleUser {
   email: string;
@@ -15,49 +15,52 @@ interface UseGoogleAuthReturn {
 // Load Google Identity Services script
 const loadGoogleScript = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    if (document.getElementById('google-identity-script')) {
+    if (document.getElementById("google-identity-script")) {
       resolve();
       return;
     }
 
-    const script = document.createElement('script');
-    script.id = 'google-identity-script';
-    script.src = 'https://accounts.google.com/gsi/client';
+    const script = document.createElement("script");
+    script.id = "google-identity-script";
+    script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Google script'));
+    script.onerror = () => reject(new Error("Failed to load Google script"));
     document.body.appendChild(script);
   });
 };
 
 export const useGoogleAuth = (
   onSuccess: (user: GoogleUser) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
 ): UseGoogleAuthReturn => {
   const isLoadedRef = useRef(false);
   const clientRef = useRef<any>(null);
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId || clientId === 'your-google-client-id.apps.googleusercontent.com') {
-      console.warn('Google Client ID not configured');
+    if (
+      !clientId ||
+      clientId === "your-google-client-id.apps.googleusercontent.com"
+    ) {
+      console.warn("Google Client ID not configured");
       return;
     }
 
     const initGoogle = async () => {
       try {
         await loadGoogleScript();
-        
+
         // Wait for google to be available
         if (!window.google?.accounts?.oauth2) {
-          console.warn('Google Identity Services not available');
+          console.warn("Google Identity Services not available");
           return;
         }
 
         clientRef.current = window.google.accounts.oauth2.initTokenClient({
           client_id: clientId,
-          scope: 'email profile openid',
+          scope: "email profile openid",
           callback: async (response) => {
             if (response.error) {
               onError?.(new Error(response.error));
@@ -66,10 +69,13 @@ export const useGoogleAuth = (
 
             try {
               // Fetch user info from Google
-              const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${response.access_token}` },
-              }).then((res) => {
-                if (!res.ok) throw new Error('Failed to fetch user info');
+              const userInfo = await fetch(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                {
+                  headers: { Authorization: `Bearer ${response.access_token}` },
+                },
+              ).then((res) => {
+                if (!res.ok) throw new Error("Failed to fetch user info");
                 return res.json();
               });
 
@@ -80,15 +86,21 @@ export const useGoogleAuth = (
                 sub: userInfo.sub,
               });
             } catch (error) {
-              onError?.(error instanceof Error ? error : new Error('Failed to get user info'));
+              onError?.(
+                error instanceof Error
+                  ? error
+                  : new Error("Failed to get user info"),
+              );
             }
           },
         });
 
         isLoadedRef.current = true;
       } catch (error) {
-        console.error('Failed to initialize Google Auth:', error);
-        onError?.(error instanceof Error ? error : new Error('Failed to initialize'));
+        console.error("Failed to initialize Google Auth:", error);
+        onError?.(
+          error instanceof Error ? error : new Error("Failed to initialize"),
+        );
       }
     };
 
@@ -99,7 +111,8 @@ export const useGoogleAuth = (
     if (clientRef.current) {
       clientRef.current.requestAccessToken();
     } else {
-      onError?.(new Error('Google Auth not initialized'));
+      onError?.(new Error("Google Auth not initialized"));
+      console.warn("Google Auth not initialized");
     }
   }, [onError]);
 

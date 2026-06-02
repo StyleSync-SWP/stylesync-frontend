@@ -60,4 +60,14 @@ export const outfitApi = {
       return handleResponse(response);
     });
   },
+
+  deleteOutfit: async (outfitId: string) => {
+    return apiRequest(async () => {
+      const response = await fetch(`${API_URL}/outfits/${outfitId}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      return handleResponse(response);
+    });
+  },
 };

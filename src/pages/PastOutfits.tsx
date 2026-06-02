@@ -157,16 +157,27 @@ export default function PastOutfits() {
       });
 
       if (result.isConfirmed) {
-        setOutfits(outfits.filter((outfit) => outfit.id !== selectedOutfit.id));
-        setIsDetailModalOpen(false);
-        setSelectedOutfit(null);
-        Swal.fire({
-          title: "Removed!",
-          text: "The outfit has been removed.",
-          icon: "success",
-          background: "#34020E",
-          color: "#fff",
-        });
+        try {
+          await outfitApi.deleteOutfit(selectedOutfit.id);
+          setOutfits(outfits.filter((outfit) => outfit.id !== selectedOutfit.id));
+          setIsDetailModalOpen(false);
+          setSelectedOutfit(null);
+          Swal.fire({
+            title: "Removed!",
+            text: "The outfit has been removed.",
+            icon: "success",
+            background: "#34020E",
+            color: "#fff",
+          });
+        } catch (error) {
+          Swal.fire({
+            title: "Error!",
+            text: "Failed to remove outfit.",
+            icon: "error",
+            background: "#34020E",
+            color: "#fff",
+          });
+        }
       }
     }
   };
