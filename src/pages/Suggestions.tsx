@@ -164,7 +164,7 @@ export default function Suggestions() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (excludeIds: string[] = []) => {
     setIsLoading(true);
     try {
       const colorPart =
@@ -176,7 +176,10 @@ export default function Suggestions() {
         ? `${textInput}${colorPart}`
         : `A ${dropdownValues.style} outfit for ${dropdownValues.occasion} in ${dropdownValues.weather} weather.${colorPart}`;
 
-      const responseList = await outfitApi.suggestOutfit({ query });
+      const responseList = await outfitApi.suggestOutfit({ 
+        query,
+        exclude_garment_ids: excludeIds.length > 0 ? excludeIds : undefined
+      });
       const list = Array.isArray(responseList) ? responseList : [responseList];
 
       const outfits: SuggestedOutfit[] = list
@@ -212,7 +215,8 @@ export default function Suggestions() {
       setSuggestedOutfit(allOutfits[next]);
       setUserRating(0);
     } else {
-      handleSubmit();
+      const excludeIds = suggestedOutfit ? suggestedOutfit.items.map(item => item.id) : [];
+      handleSubmit(excludeIds);
     }
   };
 
@@ -502,7 +506,7 @@ export default function Suggestions() {
             )}
 
             <button
-              onClick={handleSubmit}
+              onClick={() => handleSubmit()}
               disabled={isLoading}
               className="w-full mt-6 bg-[#FE7743] text-black font-semibold py-3 rounded-lg hover:bg-[#FF9A5C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >

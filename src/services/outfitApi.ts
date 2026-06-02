@@ -26,6 +26,7 @@ interface OutfitSuggestPayload {
     styles: string[];
     colors: string[];
   } | null;
+  exclude_garment_ids?: string[];
 }
 
 export const outfitApi = {
