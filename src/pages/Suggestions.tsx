@@ -87,7 +87,6 @@ export default function Suggestions() {
   const [dropdownValues, setDropdownValues] = useState({
     occasion: "",
     style: "",
-    weather: "",
   });
   const [suggestedOutfit, setSuggestedOutfit] = useState<SuggestedOutfit | null>(null);
   const [allOutfits, setAllOutfits] = useState<SuggestedOutfit[]>([]);
@@ -174,7 +173,7 @@ export default function Suggestions() {
 
       const query = textInput
         ? `${textInput}${colorPart}`
-        : `A ${dropdownValues.style} outfit for ${dropdownValues.occasion} in ${dropdownValues.weather} weather.${colorPart}`;
+        : `A ${dropdownValues.style} outfit for ${dropdownValues.occasion}.${colorPart}`;
 
       const responseList = await outfitApi.suggestOutfit({ 
         query,
@@ -392,12 +391,14 @@ export default function Suggestions() {
                   <div className="flex flex-wrap gap-2">
                     {[
                       "Casual",
-                      "Formal",
-                      "Business",
-                      "Date Night",
+                      "Office",
                       "Party",
+                      "Beach",
+                      "Evening",
                       "Outdoor",
-                    ].map((option) => (
+                      "Date Night",
+                      "Sport"
+                      ].map((option) => (
                       <button
                         key={option}
                         type="button"
@@ -424,12 +425,15 @@ export default function Suggestions() {
                   <label className="text-white block mb-2">Style</label>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      "Minimalist",
-                      "Bold & Trendy",
-                      "Classic",
-                      "Bohemian",
-                      "Sporty",
-                      "Elegant",
+                       "Casual",
+                       "Formal",
+                       "Business",
+                       "Streetwear",
+                       "Sport",
+                       "Bohemian",
+                       "Elegant",
+                       "Minimalist",
+                       "Romantic"
                     ].map((option) => (
                       <button
                         key={option}
@@ -445,32 +449,6 @@ export default function Suggestions() {
                         }
                         className={pillBtn(
                           dropdownValues.style === option.toLowerCase(),
-                        )}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-white block mb-2">Weather</label>
-                  <div className="flex flex-wrap gap-2">
-                    {["Hot", "Warm", "Cool", "Cold", "Rainy"].map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() =>
-                          setDropdownValues({
-                            ...dropdownValues,
-                            weather:
-                              dropdownValues.weather === option.toLowerCase()
-                                ? ""
-                                : option.toLowerCase(),
-                          })
-                        }
-                        className={pillBtn(
-                          dropdownValues.weather === option.toLowerCase(),
                         )}
                       >
                         {option}

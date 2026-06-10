@@ -14,6 +14,27 @@ import {
 import { FiChevronDown } from "react-icons/fi";
 import LoadingOverlay from "../components/LoadingOverlay";
 
+const CATEGORY_MAP: Record<string, string> = {
+    't-shirt': 'Tops', 'shirt': 'Tops', 'blouse': 'Tops',
+    'hoodie': 'Tops', 'sweater': 'Tops', 'cardigan': 'Tops',
+    'vest': 'Tops', 'crop top': 'Tops', 'polo shirt': 'Tops',
+    'turtleneck': 'Tops',
+    'skirt': 'Bottoms', 'pants': 'Bottoms', 'jeans': 'Bottoms',
+    'shorts': 'Bottoms', 'leggings': 'Bottoms', 'wide-leg pants': 'Bottoms',
+    'mini skirt': 'Bottoms', 'midi skirt': 'Bottoms', 'maxi skirt': 'Bottoms',
+    'jacket': 'Outerwear', 'blazer': 'Outerwear', 'coat': 'Outerwear',
+    'trench coat': 'Outerwear', 'puffer jacket': 'Outerwear', 'denim jacket': 'Outerwear',
+    'dress': 'Dresses', 'jumpsuit': 'Dresses', 'romper': 'Dresses',
+    'sneakers': 'Shoes', 'boots': 'Shoes', 'sandals': 'Shoes',
+    'heels': 'Shoes', 'loafers': 'Shoes', 'mules': 'Shoes',
+    'ankle boots': 'Shoes', 'platform shoes': 'Shoes',
+    'bag': 'Accessories', 'belt': 'Accessories', 'scarf': 'Accessories',
+    'hat': 'Accessories', 'socks': 'Accessories', 'gloves': 'Accessories',
+    'sunglasses': 'Accessories', 'jewellery': 'Accessories',
+    'backpack': 'Accessories', 'tote bag': 'Accessories',
+    'swimsuit': 'Accessories', 'bikini top': 'Accessories', 'bikini bottom': 'Accessories',
+}
+
 interface ClothingItem {
   id: string;
   name: string;
@@ -51,7 +72,7 @@ export default function Wardrobe() {
           code: item.code || "",
           color: item.color || "",
           style: item.style || "",
-          category: item.category || "Uncategorized",
+          category: CATEGORY_MAP[item.category?.toLowerCase()] || "Accessories",
           image: item.image_base64,
         }));
         setClothes(mappedData);
@@ -180,7 +201,7 @@ export default function Wardrobe() {
           code: newGarment.code || "",
           color: newGarment.color || "",
           style: newGarment.style || "",
-          category: newGarment.category || "Uncategorized",
+          category: CATEGORY_MAP[newGarment.category?.toLowerCase()] || "Accessories",
           image: newGarment.image_base64,
         });
       }
