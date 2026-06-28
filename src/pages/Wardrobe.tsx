@@ -42,7 +42,8 @@ interface ClothingItem {
   code: string;
   color: string;
   style: string;
-  category: string;
+  category: string;      // группа для фильтрации: Tops, Bottoms, ...
+  rawCategory: string;   // оригинал: t-shirt, jacket, ...
   image: string;
 }
 
@@ -73,6 +74,7 @@ export default function Wardrobe() {
           color: item.color || "",
           style: item.style || "",
           category: CATEGORY_MAP[item.category?.toLowerCase()] || "Accessories",
+          rawCategory: item.category || "",
           image: item.image_base64,
         }));
         setClothes(mappedData);
@@ -202,6 +204,7 @@ export default function Wardrobe() {
           color: newGarment.color || "",
           style: newGarment.style || "",
           category: CATEGORY_MAP[newGarment.category?.toLowerCase()] || "Accessories",
+          rawCategory: newGarment.category || "",
           image: newGarment.image_base64,
         });
       }
@@ -410,7 +413,7 @@ export default function Wardrobe() {
                     <p className="text-gray-400 text-xs">{item.brand}</p>
                     <div className="flex gap-1 mt-2 flex-wrap">
                       <span className="text-xs bg-[#273F4F] text-white px-2 py-0.5 rounded">
-                        {item.category}
+                        {item.rawCategory || item.category}
                       </span>
                       <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded">
                         {item.color}
