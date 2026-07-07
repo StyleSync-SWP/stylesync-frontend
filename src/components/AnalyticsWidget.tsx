@@ -1,9 +1,6 @@
-// ============================================
-// REAL IMPLEMENTATION - Fetch data from backend
-// ============================================
-/*
 import { useState, useEffect } from "react";
-import useAuthStore from "../stores/authStore";
+import { wardrobeApi } from "../services/wardrobeApi";
+import { outfitApi } from "../services/outfitApi";
 
 interface ColorData {
   name: string;
@@ -11,125 +8,35 @@ interface ColorData {
   hex: string;
 }
 
-interface UsageData {
-  day: string;
-  outfits: number;
-}
-
-interface AnalyticsResponse {
-  colors: ColorData[];
-  weeklyUsage: UsageData[];
-  message: string;
-}
-
-export default function AnalyticsWidget() {
-  const { user } = useAuthStore();
-  const [data, setData] = useState<AnalyticsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const response = await fetch(`/api/users/${user?.id}/analytics`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        const analyticsData = await response.json();
-        setData(analyticsData);
-      } catch (error) {
-        console.error("Failed to fetch analytics:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnalytics();
-  }, [user?.id]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-white">
-        <p className="text-sm">Loading your analytics...</p>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-white text-center p-4">
-        <p className="text-lg font-medium mb-2">Use our features to learn more about your data</p>
-        <p className="text-sm text-white/60">Create outfits and build your wardrobe to see insights</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-full p-4 gap-4">
-      <p className="text-sm text-white/80 text-center">{data.message}</p>
-      
-      <div className="flex-1 grid grid-cols-2 gap-4">
-        <div className="bg-white/10 rounded-xl p-3">
-          <h4 className="text-xs text-white/60 uppercase mb-2">Color Distribution</h4>
-          <ColorBarChart colors={data.colors} />
-        </div>
-        <div className="bg-white/10 rounded-xl p-3">
-          <h4 className="text-xs text-white/60 uppercase mb-2">Weekly Usage</h4>
-          <WeekUsageChart data={data.weeklyUsage} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ColorBarChart({ colors }: { colors: ColorData[] }) {
-  const max = Math.max(...colors.map(c => c.count));
-  return (
-    <div className="flex flex-col gap-2 h-full justify-center">
-      {colors.map((color) => (
-        <div key={color.name} className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded" style={{ backgroundColor: color.hex }} />
-          <span className="text-xs text-white/70 w-16">{color.name}</span>
-          <div className="flex-1 bg-white/10 rounded-full h-2">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: `${(color.count / max) * 100}%`, backgroundColor: color.hex }}
-            />
-          </div>
-          <span className="text-xs text-white/50 w-6 text-right">{color.count}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function WeekUsageChart({ data }: { data: UsageData[] }) {
-  const max = Math.max(...data.map(d => d.outfits));
-  return (
-    <div className="flex items-end justify-between h-full gap-1">
-      {data.map((day) => (
-        <div key={day.day} className="flex flex-col items-center gap-1 flex-1">
-          <div
-            className="w-full bg-[#FE7743] rounded-t transition-all duration-500"
-            style={{ height: `${(day.outfits / max) * 80}%`, minHeight: "4px" }}
-          />
-          <span className="text-[10px] text-white/50">{day.day.slice(0, 3)}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-*/
-
-// ============================================
-// DEMO IMPLEMENTATION - Display 2 graphs with demo data
-// ============================================
-
-interface ColorData {
-  name: string;
-  count: number;
-  hex: string;
-}
+// Color hex mapping for common colors
+const colorHexMap: Record<string, string> = {
+  black: "#000000",
+  white: "#FFFFFF",
+  gray: "#808080",
+  grey: "#808080",
+  navy: "#000080",
+  blue: "#2563EB",
+  red: "#DC2626",
+  brown: "#8B4513",
+  beige: "#F5F5DC",
+  green: "#16A34A",
+  yellow: "#EAB308",
+  pink: "#EC4899",
+  purple: "#9333EA",
+  orange: "#F97316",
+  // Additional colors
+  khaki: "#C3B091",
+  teal: "#0F766E",
+  charcoal: "#36454F",
+  cream: "#FFFDD0",
+  blush: "#F4C2C2",
+  indigo: "#4B0082",
+  mint: "#98FF98",
+  terracotta: "#E2725B",
+  peach: "#FFCBA4",
+  olive: "#808000",
+  burgundy: "#800020",
+};
 
 // Color Pie Chart Component
 function ColorPieChart({ colors }: { colors: ColorData[] }) {
@@ -137,7 +44,9 @@ function ColorPieChart({ colors }: { colors: ColorData[] }) {
   let cumulativePercent = 0;
 
   const segments = colors.map((c) => {
-    const percent = (c.count / total) * 100;
+    // Guard against divide-by-zero and clamp each slice to a valid 0-100% range
+    const rawPercent = total > 0 ? (c.count / total) * 100 : 0;
+    const percent = Math.min(100, Math.max(0, rawPercent));
     const start = cumulativePercent;
     cumulativePercent += percent;
     return { ...c, percent, start };
@@ -150,8 +59,10 @@ function ColorPieChart({ colors }: { colors: ColorData[] }) {
           const startAngle = (segment.start / 100) * 360;
           const endAngle = ((segment.start + segment.percent) / 100) * 360;
           const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+
           const startRad = (startAngle * Math.PI) / 180;
           const endRad = (endAngle * Math.PI) / 180;
+
           const x1 = 20 + 15 * Math.cos(startRad);
           const y1 = 20 + 15 * Math.sin(startRad);
           const x2 = 20 + 15 * Math.cos(endRad);
@@ -163,7 +74,7 @@ function ColorPieChart({ colors }: { colors: ColorData[] }) {
               d={`M 20 20 L ${x1} ${y1} A 15 15 0 ${largeArc} 1 ${x2} ${y2} Z`}
               fill={segment.hex}
               stroke="#fefefe"
-              strokeWidth="0.7"
+              strokeWidth="0.4"
             />
           );
         })}
@@ -176,8 +87,10 @@ function ColorPieChart({ colors }: { colors: ColorData[] }) {
               className="w-3 h-3 rounded border border-white/20"
               style={{ backgroundColor: s.hex }}
             />
-            <span className="text-[10px] text-white/80">{s.name}</span>
-            <span className="text-[10px] text-white/50">
+            <span className="text-[10px] text-[rgba(245,237,227,0.8)]">
+              {s.name}
+            </span>
+            <span className="text-[10px] text-[rgba(245,237,227,0.5)]">
               {Math.round(s.percent)}%
             </span>
           </div>
@@ -189,8 +102,12 @@ function ColorPieChart({ colors }: { colors: ColorData[] }) {
 
 // Mini Gauge Chart - Wardrobe Health
 function WardrobeHealthGauge({ percentage }: { percentage: number }) {
+  // Clamp to 0-100% in case usage history references items no longer in the wardrobe
+  const clampedPercentage = Math.min(100, Math.max(0, percentage));
+
   const circumference = 2 * Math.PI * 28;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const strokeDashoffset =
+    circumference - (clampedPercentage / 100) * circumference;
 
   // Color based on health score
   const getColor = (p: number) => {
@@ -200,7 +117,7 @@ function WardrobeHealthGauge({ percentage }: { percentage: number }) {
     return "#ef4444"; // red
   };
 
-  const color = getColor(percentage);
+  const color = getColor(clampedPercentage);
 
   return (
     <div className="flex flex-col items-center justify-center h-full">
@@ -211,13 +128,12 @@ function WardrobeHealthGauge({ percentage }: { percentage: number }) {
           cy="40"
           r="28"
           fill="none"
-          stroke="rgba(255,255,255,0.1)"
+          stroke="rgba(245,237,227,0.1)"
           strokeWidth="6"
           strokeDasharray={circumference}
           strokeDashoffset={0}
           strokeLinecap="round"
         />
-
         {/* Progress circle */}
         <circle
           cx="40"
@@ -233,60 +149,135 @@ function WardrobeHealthGauge({ percentage }: { percentage: number }) {
         />
       </svg>
       <div className="text-center -mt-14 mb-3">
-        <span className="text-lg font-bold text-white">{percentage}%</span>
+        <span className="text-lg font-bold text-[#F5EDE3]">
+          {clampedPercentage}%
+        </span>
       </div>
       <div className="mt-3 flex items-center gap-1">
         <div
           className="w-1.5 h-1.5 rounded-full"
           style={{ backgroundColor: color }}
         />
-        <span className="text-[9px] text-white/60">
-          {percentage >= 80
+        <span className="text-[9px] text-[rgba(245,237,227,0.6)]">
+          {clampedPercentage >= 80
             ? "Excellent"
-            : percentage >= 60
+            : clampedPercentage >= 60
               ? "Good"
-              : percentage >= 40
+              : clampedPercentage >= 40
                 ? "Fair"
                 : "Needs Work"}
         </span>
       </div>
-      <p className="text-[8px] text-white/40 mt-2 text-center px-2">
-        {percentage}% of items are suggested/fit well
+      <p className="text-[8px] text-[rgba(245,237,227,0.4)] mt-2 text-center px-2">
+        {clampedPercentage}% of total clothes are suggested
       </p>
     </div>
   );
 }
 
 export default function AnalyticsWidget() {
-  // Demo data
-  const colorData: ColorData[] = [
-    { name: "Black", count: 15, hex: "#1a1a2e" },
-    { name: "Navy", count: 10, hex: "#4a4a6a" },
-    { name: "Brown", count: 8, hex: "#8B4513" },
-    { name: "White", count: 6, hex: "#e8e8e8" },
-    { name: "Red", count: 4, hex: "#FE7743" },
-  ];
+  const [colorData, setColorData] = useState<ColorData[]>([]);
+  const [wardrobeHealth, setWardrobeHealth] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Wardrobe health score (demo)
-  const wardrobeHealth = 72;
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        // Fetch wardrobe and outfit history
+        const [wardrobeData, outfitHistory] = await Promise.all([
+          wardrobeApi.getWardrobe(),
+          outfitApi.getHistory().catch(() => []),
+        ]);
+
+        // Process color distribution from wardrobe
+        const colorCounts: Record<string, number> = {};
+        wardrobeData.forEach((item: any) => {
+          const color = item.color?.toLowerCase() || "unknown";
+          colorCounts[color] = (colorCounts[color] || 0) + 1;
+        });
+
+        const colors: ColorData[] = Object.entries(colorCounts)
+          .map(([name, count]) => ({
+            name: name.charAt(0).toUpperCase() + name.slice(1),
+            count,
+            hex: colorHexMap[name.toLowerCase()] || "#666666",
+          }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5); // Top 5 colors
+
+        setColorData(colors);
+
+        // Calculate wardrobe health based on outfit usage
+        const uniqueItemsUsed = new Set();
+        outfitHistory.forEach((outfit: any) => {
+          if (outfit.garment_ids) {
+            outfit.garment_ids.forEach((id: string) => uniqueItemsUsed.add(id));
+          }
+        });
+
+        // Clamp to 0-100: usage history can reference garment ids that
+        // no longer exist in the current wardrobe, which would otherwise
+        // push this ratio above 100%.
+        const rawHealthPercentage =
+          wardrobeData.length > 0
+            ? (uniqueItemsUsed.size / wardrobeData.length) * 100
+            : 0;
+        const healthPercentage = Math.min(
+          100,
+          Math.max(0, Math.round(rawHealthPercentage)),
+        );
+
+        setWardrobeHealth(healthPercentage);
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-[#F5EDE3]">
+        <p className="text-sm">Loading your analytics...</p>
+      </div>
+    );
+  }
+
+  if (colorData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-[#F5EDE3] text-center p-4">
+        <p className="text-sm font-medium mb-2">
+          Upload clothes to see more data
+        </p>
+        <p className="text-xs text-[rgba(245,237,227,0.5)]">
+          Add items to your wardrobe to unlock color and usage insights
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full p-2">
       {/* Header */}
       <div className="flex items-center justify-center mb-1">
-        <h3 className="text-sm font-bold text-white">Style Analytics</h3>
+        <h3 className="text-2xl font-bold font-serif text-[#F5EDE3]">
+          Style Analytics
+        </h3>
       </div>
 
       {/* Text about features */}
-      <p className="text-xs text-white/60 text-center mb-3">
+      <p className="text-xs text-[rgba(245,237,227,0.5)] text-center mb-3">
         Use our features to learn more about your data
       </p>
 
       {/* Two Graphs Side by Side */}
       <div className="flex-1 grid grid-cols-2 gap-3">
         {/* Graph 1: Color Pie Chart */}
-        <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center">
-          <h4 className="text-[11px] text-[#ffffff] uppercase tracking-wide mb-2">
+        <div className="bg-[rgba(196,162,101,0.08)] border border-[rgba(196,162,101,0.14)] rounded-xl p-3 flex flex-col items-center">
+          <h4 className="text-[11px] text-[#C4A265] uppercase tracking-wide mb-2">
             Wardrobe Colors
           </h4>
           <div className="flex-1">
@@ -295,8 +286,8 @@ export default function AnalyticsWidget() {
         </div>
 
         {/* Graph 2: Wardrobe Health Gauge */}
-        <div className="bg-white/5 rounded-xl p-3 flex flex-col items-center">
-          <h4 className="text-[11px] text-[#ffffff] uppercase tracking-wide mb-2">
+        <div className="bg-[rgba(196,162,101,0.08)] border border-[rgba(196,162,101,0.14)] rounded-xl p-3 flex flex-col items-center">
+          <h4 className="text-[11px] text-[#C4A265] uppercase tracking-wide mb-2">
             Wardrobe Health
           </h4>
           <div className="flex-1">
@@ -304,11 +295,6 @@ export default function AnalyticsWidget() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <p className="text-[9px] text-white/30 text-center mt-3">
-        Real analytics with backend integration coming soon
-      </p>
     </div>
   );
 }

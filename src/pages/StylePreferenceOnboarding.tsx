@@ -229,23 +229,6 @@ const QUESTIONS: Question[] = [
     type: "multi-select",
     options: OUTFIT_PRIORITY_OPTIONS,
   },
-  // Section 5: Shopping & Wardrobe Habits
-  {
-    id: "5.1",
-    section: "Lifestyle",
-    subsection: "Shopping & Wardrobe Habits",
-    question: "How often do you buy clothes?",
-    type: "one-choice",
-    options: ["Rarely", "Every few months", "Monthly", "Frequently"],
-  },
-  {
-    id: "5.2",
-    section: "Lifestyle",
-    subsection: "Shopping & Wardrobe Habits",
-    question: "What problem do you struggle with most?",
-    type: "multi-select",
-    options: SHOPPING_PROBLEM_OPTIONS,
-  },
   // Section 6: Recommendation Personalization
   {
     id: "6.1",
@@ -305,15 +288,6 @@ const QUESTIONS: Question[] = [
     optional: true,
   },
   // Section 9: Optional Advanced Inputs
-  {
-    id: "9.1",
-    section: "Optional Advanced",
-    subsection: "Optional Advanced Inputs",
-    question: "Budget range for shopping suggestions",
-    type: "one-choice",
-    options: ["Budget-friendly", "Mid-range", "Premium", "No preference"],
-    optional: true,
-  },
   {
     id: "9.2",
     section: "Optional Advanced",
@@ -382,7 +356,7 @@ export default function StylePreferenceOnboarding() {
           icon: "warning",
           title: "Contradiction detected",
           text: "You cannot like and dislike the same style. Please remove it from your dislikes first.",
-          confirmButtonColor: "#fca5a5",
+          confirmButtonColor: "#C4A265",
           background: "#1a050a",
           color: "#fff",
         });
@@ -398,7 +372,7 @@ export default function StylePreferenceOnboarding() {
           icon: "warning",
           title: "Contradiction detected",
           text: "You cannot like and dislike the same style. Please remove it from your likes first.",
-          confirmButtonColor: "#fca5a5",
+          confirmButtonColor: "#C4A265",
           background: "#1a050a",
           color: "#fff",
         });
@@ -414,7 +388,7 @@ export default function StylePreferenceOnboarding() {
           icon: "warning",
           title: "Contradiction detected",
           text: "You cannot wear and avoid the same color. Please remove it from your avoid list first.",
-          confirmButtonColor: "#fca5a5",
+          confirmButtonColor: "#C4A265",
           background: "#1a050a",
           color: "#fff",
         });
@@ -430,7 +404,7 @@ export default function StylePreferenceOnboarding() {
           icon: "warning",
           title: "Contradiction detected",
           text: "You cannot wear and avoid the same color. Please remove it from your wear most list first.",
-          confirmButtonColor: "#fca5a5",
+          confirmButtonColor: "#C4A265",
           background: "#1a050a",
           color: "#fff",
         });
@@ -472,7 +446,7 @@ export default function StylePreferenceOnboarding() {
         icon: "warning",
         title: "Please answer all questions",
         text: "You need to answer all required questions before proceeding to the next step.",
-        confirmButtonColor: "#fca5a5",
+        confirmButtonColor: "#C4A265",
         background: "#1a050a",
         color: "#fff",
       });
@@ -505,12 +479,12 @@ export default function StylePreferenceOnboarding() {
           <p style="color: #666; margin-bottom: 20px;">
             Your style preferences have been saved successfully.
           </p>
-          <div style="background: linear-gradient(135deg, #fca5a5 0%, #f9a8d4 100%); 
+          <div style="background: linear-gradient(135deg, #C4A265 0%, #e6c98a 100%);; 
                       padding: 20px; 
                       border-radius: 12px; 
                       margin: 20px 0;
-                      box-shadow: 0 8px 32px rgba(252, 165, 165, 0.3);">
-            <p style="color: #34020E; font-size: 14px; margin: 0; font-weight: 600;">
+                      box-shadow: 0 8px 32px rgba(196, 162, 101, 0.3);">
+            <p style="color: #1a0508; font-size: 14px; margin: 0; font-weight: 600;">
               We'll now provide personalized outfit suggestions based on your unique style!
             </p>
           </div>
@@ -520,10 +494,10 @@ export default function StylePreferenceOnboarding() {
         </div>
       `,
       icon: "success",
-      iconColor: "#fca5a5",
+      iconColor: "#C4A265",
       background: "#1a050a",
       color: "#fff",
-      confirmButtonColor: "#fca5a5",
+      confirmButtonColor: "#C4A265",
       confirmButtonText: "Go to Dashboard",
       customClass: {
         popup: "styled-popup",
@@ -562,15 +536,15 @@ export default function StylePreferenceOnboarding() {
                 className={`flex items-center p-4 rounded-xl cursor-pointer transition-all
                   ${
                     (value as string[])?.includes(option)
-                      ? "bg-[#fca5a5] text-[#34020E] border-2 border-[#fca5a5]"
-                      : "bg-[#1a050a] text-gray-300 border-2 border-[#34020E] hover:border-[#fca5a5]"
+                      ? "bg-[#C4A265] text-[#1a0508] border-2 border-[#C4A265]"
+                      : "bg-[#0f0204] text-[rgba(245,237,227,0.6)] border-2 border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)]"
                   }`}
               >
                 <input
                   type="checkbox"
                   checked={(value as string[])?.includes(option) || false}
                   onChange={() => handleMultiSelectToggle(question.id, option)}
-                  className="w-5 h-5 rounded border-gray-500 text-[#fca5a5] focus:ring-[#fca5a5] mr-3 flex-shrink-0"
+                  className="w-5 h-5 rounded border-gray-500 accent-[#34020E] focus:ring-[#34020E] mr-3 flex-shrink-0"
                 />
                 <span className="font-medium text-sm">{option}</span>
               </label>
@@ -587,8 +561,8 @@ export default function StylePreferenceOnboarding() {
                 className={`flex items-center p-4 rounded-xl cursor-pointer transition-all
                   ${
                     value === option
-                      ? "bg-[#fca5a5] text-[#34020E] border-2 border-[#fca5a5]"
-                      : "bg-[#1a050a] text-gray-300 border-2 border-[#34020E] hover:border-[#fca5a5]"
+                      ? "bg-[#C4A265] text-[#1a0508] border-2 border-[#C4A265]"
+                      : "bg-[#0f0204] text-[rgba(245,237,227,0.6)] border-2 border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)]"
                   }`}
               >
                 <input
@@ -596,7 +570,7 @@ export default function StylePreferenceOnboarding() {
                   name={question.id}
                   checked={value === option}
                   onChange={() => handleAnswerChange(question.id, option)}
-                  className="w-5 h-5 rounded-full border-gray-500 text-[#fca5a5] focus:ring-[#fca5a5] mr-3 flex-shrink-0"
+                  className="w-5 h-5 rounded-full border-gray-500 accent-[#34020E] focus:ring-[#34020E] mr-3 flex-shrink-0"
                 />
                 <span className="font-medium text-sm">{option}</span>
               </label>
@@ -607,7 +581,7 @@ export default function StylePreferenceOnboarding() {
       case "scale":
         return (
           <div className="space-y-4">
-            <div className="flex justify-between text-sm text-gray-400">
+            <div className="flex justify-between text-sm text-[rgba(245,237,227,0.4)]">
               <span>Style over comfort</span>
               <span>Comfort is most important</span>
             </div>
@@ -623,8 +597,8 @@ export default function StylePreferenceOnboarding() {
                       className={`flex-1 py-4 rounded-xl font-bold text-lg transition-all
                       ${
                         value === num
-                          ? "bg-[#fca5a5] text-[#34020E]"
-                          : "bg-[#1a050a] text-gray-300 hover:bg-[#2a0a10]"
+                          ? "bg-[#C4A265] text-[#1a0508]"
+                          : "bg-[#0f0204] text-[rgba(245,237,227,0.6)] hover:bg-[#1a0508]"
                       }`}
                     >
                       {num}
@@ -644,8 +618,8 @@ export default function StylePreferenceOnboarding() {
               className={`flex-1 py-4 rounded-xl font-bold transition-all
                 ${
                   value === true
-                    ? "bg-[#fca5a5] text-[#34020E]"
-                    : "bg-[#1a050a] text-gray-300 hover:bg-[#2a0a10]"
+                    ? "bg-[#C4A265] text-[#1a0508]"
+                    : "bg-[#0f0204] text-[rgba(245,237,227,0.6)] hover:bg-[#1a0508]"
                 }`}
             >
               Yes
@@ -655,8 +629,8 @@ export default function StylePreferenceOnboarding() {
               className={`flex-1 py-4 rounded-xl font-bold transition-all
                 ${
                   value === false
-                    ? "bg-[#fca5a5] text-[#34020E]"
-                    : "bg-[#1a050a] text-gray-300 hover:bg-[#2a0a10]"
+                    ? "bg-[#C4A265] text-[#1a0508]"
+                    : "bg-[#0f0204] text-[rgba(245,237,227,0.6)] hover:bg-[#1a0508]"
                 }`}
             >
               No
@@ -670,8 +644,8 @@ export default function StylePreferenceOnboarding() {
             value={(value as string) || ""}
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder={question.placeholder}
-            className="w-full p-4 rounded-xl bg-[#1a050a] text-white border-2 border-[#34020E] 
-                     focus:border-[#fca5a5] focus:outline-none resize-none h-32"
+            className="w-full p-4 rounded-xl bg-[#0f0204] text-[#F5EDE3] border-2 border-[rgba(196,162,101,0.14)] 
+                     focus:border-[rgba(196,162,101,0.4)] focus:outline-none resize-none h-32"
           />
         );
 
@@ -698,26 +672,26 @@ export default function StylePreferenceOnboarding() {
       <div className="max-w-4xl mx-auto">
         <div className="flex gap-4 mb-8 justify-between">
           <button
-            onClick={handleRetake}
-            className="px-8 py-4 bg-[#1a050a] text-white rounded-xl font-bold 
-                     border-2 border-[#34020E] hover:border-[#fca5a5] transition-all"
-          >
-            Retake Quiz
-          </button>
-          <button
             onClick={() => navigate("/dashboard")}
-            className="px-8 py-4 bg-[#fca5a5] text-[#34020E] rounded-xl font-bold 
-                     hover:bg-[#f87171] transition-all"
+            className="px-8 py-4 bg-[#C4A265] text-[#1a0508] rounded-xl font-semibold 
+                     hover:bg-[rgba(196,162,101,0.8)] transition-all"
           >
             Back to Dashboard
+          </button>
+          <button
+            onClick={handleRetake}
+            className="px-8 py-4 bg-[#0f0204] text-[#F5EDE3] rounded-xl font-semibold 
+                     border-2 border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)] transition-all"
+          >
+            Retake Quiz
           </button>
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">
+          <h1 className="font-serif text-4xl text-[#F5EDE3] font-medium mb-4">
             Your Style Profile
           </h1>
-          <p className="text-gray-400">
+          <p className="text-[rgba(245,237,227,0.5)]">
             Here's a summary of your style preferences
           </p>
         </div>
@@ -726,21 +700,21 @@ export default function StylePreferenceOnboarding() {
           {Object.entries(groupedAnswers).map(([section, items]) => (
             <div
               key={section}
-              className="bg-[#1a050a] rounded-2xl p-6 border-2 border-[#34020E]"
+              className="bg-[#1a0508] rounded-2xl p-6 border border-[rgba(196,162,101,0.14)]"
             >
-              <h2 className="text-2xl font-bold text-[#fca5a5] mb-4">
+              <h2 className="font-serif text-2xl text-[#C4A265] font-medium mb-4">
                 {section}
               </h2>
               <div className="space-y-4">
                 {items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="border-b border-[#34020E] pb-3 last:border-0"
+                    className="border-b border-[rgba(196,162,101,0.12)] pb-3 last:border-0"
                   >
-                    <p className="text-gray-300 font-medium mb-1">
+                    <p className="text-[rgba(245,237,227,0.6)] font-medium mb-1">
                       {item.question}
                     </p>
-                    <p className="text-white">
+                    <p className="text-[#F5EDE3]">
                       {Array.isArray(item.answer)
                         ? item.answer.join(", ")
                         : typeof item.answer === "boolean"
@@ -761,7 +735,7 @@ export default function StylePreferenceOnboarding() {
 
   if (showOverview) {
     return (
-      <div className="bg-[#34020E] min-h-dvh">
+      <div className="bg-[#0f0204] min-h-dvh">
         <Menu />
         <div className="px-6 py-8">{renderOverview()}</div>
       </div>
@@ -771,22 +745,22 @@ export default function StylePreferenceOnboarding() {
   const currentQuestions = getStepQuestions(currentStep);
 
   return (
-    <div className="bg-[#34020E] min-h-dvh">
+    <div className="bg-[#0f0204] min-h-dvh">
       <Menu />
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-10 py-10">
         {/* Progress Bar */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-white font-bold text-lg">
+            <span className="text-[#F5EDE3] font-medium text-lg">
               Step {currentStep + 1}/{STEPS.length}
             </span>
-            <span className="text-[#fca5a5] font-medium">
+            <span className="text-[#C4A265] font-medium tracking-widest text-xs uppercase">
               {STEPS[currentStep]}
             </span>
           </div>
-          <div className="h-2 bg-[#1a050a] rounded-full overflow-hidden">
+          <div className="h-1 bg-[#1a0508] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#fca5a5] to-[#f9a8d4] transition-all duration-500"
+              className="h-full bg-[#C4A265] transition-all duration-500"
               style={{ width: `${((currentStep + 1) / STEPS.length) * 100}%` }}
             />
           </div>
@@ -797,20 +771,20 @@ export default function StylePreferenceOnboarding() {
           {currentQuestions.map((question) => (
             <div
               key={question.id}
-              className="bg-[#1a050a] rounded-2xl p-6 border-2 border-[#34020E]"
+              className="bg-[#1a0508] rounded-2xl p-6 border border-[rgba(196,162,101,0.14)]"
             >
               <div className="mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#fca5a5] font-medium">
+                  <span className="text-xs text-[#C4A265] font-medium tracking-widest uppercase">
                     {question.subsection}
                   </span>
                   {question.optional && (
-                    <span className="text-xs text-gray-500 bg-[#1a050a] px-2 py-1 rounded-full">
+                    <span className="text-xs text-[rgba(245,237,227,0.3)] bg-[#0f0204] px-2 py-1 rounded-full">
                       Optional
                     </span>
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-white mt-1">
+                <h3 className="font-serif text-xl text-[#F5EDE3] font-medium mt-2">
                   {question.question}
                 </h3>
               </div>
@@ -824,16 +798,16 @@ export default function StylePreferenceOnboarding() {
           <button
             onClick={handlePrevious}
             disabled={currentStep === 0}
-            className="px-8 py-4 bg-[#1a050a] text-white rounded-xl font-bold 
-                     border-2 border-[#34020E] hover:border-[#fca5a5] transition-all
+            className="px-8 py-4 bg-[#0f0204] text-[#F5EDE3] rounded-xl font-semibold 
+                     border border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)] transition-all
                      disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Previous
           </button>
           <button
             onClick={handleNext}
-            className="px-8 py-4 bg-[#fca5a5] text-[#34020E] rounded-xl font-bold 
-                     hover:bg-[#f87171] transition-all"
+            className="px-8 py-4 bg-[#C4A265] text-[#1a0508] rounded-xl font-semibold 
+                     hover:bg-[rgba(196,162,101,0.8)] transition-all"
           >
             {currentStep === STEPS.length - 1 ? "Complete" : "Next"}
           </button>

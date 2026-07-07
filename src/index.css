@@ -2,6 +2,7 @@
 
 @theme {
   --font-sans: "DM Sans", "Helvetica Neue", serif;
+  --font-serif: "Playfair Display", serif;
 }
 
 @font-face {
@@ -42,6 +43,28 @@ input.autofill-red:-webkit-autofill {
 @layer base {
   * {
     font-family: "DM Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  body {
+    background-color: #0f0204;
+    color: #F5EDE3;
+  }
+
+  ::selection {
+    background: rgba(196, 162, 101, 0.3);
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0f0204;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #34020E;
+    border-radius: 3px;
   }
 }
 

@@ -1,91 +1,58 @@
-import React, { useState } from "react";
-import { IoIosArrowDown } from "react-icons/io";
+import { useState } from "react";
 
 export default function FAQSection() {
   function QuestionBox({ title, content }) {
     const [isOpen, setIsOpen] = useState(false);
+
     return (
       <div
-        className="border border-white border-2 max-w-[708px] rounded-xl cursor-pointer"
-        onClick={() => {
-          setIsOpen(!isOpen);
-        }}
+        className="border-b border-[rgba(52,2,14,0.1)] cursor-pointer hover:bg-[rgba(52,2,14,0.04)] transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
       >
-        <div
-          className={`flex flex-row items-center px-5 ${
-            isOpen ? "pt-5" : "py-5"
-          }`}
-        >
-          <h1 className="text-sm font-bold md:text-lg text-white">{title}</h1>
-          <IoIosArrowDown
-            className={`ml-auto cursor-pointer transform transition-transform text-white duration-300 ${
-              isOpen ? "rotate-180" : "rotate-0"
-            }`}
-          />
+        <div className="flex flex-row items-center justify-between px-5 py-6">
+          <h4 className="font-serif text-lg text-[#34020E] font-medium">
+            {title}
+          </h4>
+
+          <span className="text-xl text-[#C4A265] font-light flex-shrink-0 ml-4">
+            {isOpen ? "−" : "+"}
+          </span>
         </div>
-        {isOpen && <p className="px-5 pb-2 text-white">{content}</p>}
+
+        {isOpen && (
+          <p className="px-5 pb-6 text-[rgba(26,5,8,0.5)] text-sm leading-relaxed font-light">
+            {content}
+          </p>
+        )}
       </div>
     );
   }
-  return (
-    <div
-      id="faqSection"
-      className="py-10 lg:w-full lg:flex lg:items-start lg:py-15 lg:px-5 xl:p-20 bg-red-200"
-    >
-      <div className="flex-1 hidden lg:flex lg:flex-col">
-        <div className="max-w-lg">
-          <h1 className="mb-40 text-5xl font-bold text-white">
-            Frequently Asked Questions
-          </h1>
-          <div className="relative flex items-center justify-center pb-20">
-            <img
-              src="./images/faq1.png"
-              alt="cookingImage"
-              className="w-[281px] h-auto absolute z-10 -translate-x-[38%] -translate-y-[46%] rounded-2xl shadow-gray-900 shadow-2xl"
-              loading="lazy"
-            />
-            <div className="bg-[#34020E] w-[286px] h-[286px] rounded-full"></div>
-            <img
-              src="./images/faq2.png"
-              alt="cookingImage2"
-              className="w-[281px] h-auto absolute -translate-x-[-38%] -translate-y-[-46%] rounded-2xl shadow-gray-900 shadow-2xl"
-              loading="lazy"
-            />
-          </div>
-        </div>
-      </div>
 
-      <div className="flex flex-col gap-5 p-5 md:pl-15 lg:pl-5 xl:p-5 md:flex-1 xl:mx-10 xl:pl-0">
-        <h1 className="text-xl font-bold text-center md:hidden">
-          Frequently Asked Questions
-        </h1>
+  return (
+    <div id="faqSection" className="py-20 bg-[#FDFAF7] flex justify-center">
+      <div className="w-full max-w-3xl px-5 flex flex-col gap-5">
+        <h2 className="font-serif text-3xl md:text-4xl text-[#34020E] font-semibold mb-12 text-center">
+          Common questions
+        </h2>
+
         <QuestionBox
-          title="How do I add my clothes?"
-          content="Upload a few clear photos of your wardrobe items using your camera."
+          title="Is StyleSync free to use?"
+          content="Yes, StyleSync is completely free. Create an account, upload your wardrobe, and start getting outfit suggestions at no cost."
         />
-        {/* <QuestionBox
-          title="Does it check the weather?"
-          content="Yes, it auto-detects your local forecast to suggest appropriate layers or you could explicitly specify it."
-        /> */}
-        {/* <QuestionBox
-          title="Can it help me pack for trips?"
-          content="Absolutely. Enter your destination and duration for a custom packing list."
-        /> */}
+
         <QuestionBox
-          title="Will it suggest new things to buy?"
-          content="Only if they bridge gaps in your current style or wardrobe."
+          title="How does the AI choose outfits?"
+          content="It considers your style profile, the weather, your occasion needs, and your outfit history to suggest combinations from your own wardrobe."
         />
+
         <QuestionBox
-          title="Does it track what I've worn?"
-          content="It tracks the past outfits that you have saved."
+          title="Can I retake the style quiz?"
+          content="Absolutely. You can update your style preferences as many times as you want from your dashboard."
         />
+
         <QuestionBox
-          title="Can I define my style?"
-          content="Yes, via a quick onboarding quiz and your personal preferences."
-        />
-        <QuestionBox
-          title="Is it available on mobile?"
-          content="It is fully optimized for both mobile and desktop web browsers, but not as a mobile app yet."
+          title="Does it work for all styles and genders?"
+          content="StyleSync is built for everyone. The quiz covers aesthetics from minimalist to streetwear, formal to casual."
         />
       </div>
     </div>

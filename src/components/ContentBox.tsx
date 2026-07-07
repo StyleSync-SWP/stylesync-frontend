@@ -2,8 +2,8 @@ import { useNavigate } from "react-router-dom";
 
 type BoxImage = {
   src: string;
-  x: number;
-  y: number;
+  x: number | string;
+  y: number | string;
   alt?: string;
   width?: number | string;
   height?: number | string;
@@ -38,11 +38,11 @@ export default function Box({
       onClick={handleClick}
       className={`
         relative
+        overflow-hidden  {/* <div> FIXED: Added this to clip the absolute-positioned images */}
         ${link ? "cursor-pointer" : ""}
         ${className ? className : ""}
-        bg-cover
-        bg-center
-        bg-red-400
+        bg-[#1a0508]
+        border border-[rgba(196,162,101,0.14)]
         rounded-2xl
         h-[37.5vh]
         flex
@@ -52,8 +52,8 @@ export default function Box({
         gap-10
         pb-15
         p-5
-        contrast-90
-        brightness-65
+        hover:border-[rgba(196,162,101,0.35)]
+        transition-colors
       `}
     >
       {images.map((img, index) => (
@@ -71,7 +71,9 @@ export default function Box({
           }}
         />
       ))}
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-2xl font-serif text-[#F5EDE3] font-medium">
+        {title}
+      </h1>
       {children}
     </div>
   );

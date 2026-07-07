@@ -31,6 +31,17 @@ export const outfitApi = {
     });
   },
 
+  saveOutfit: async (prompt: string, garmentIds: string[]) => {
+    return apiRequest(async () => {
+      const response = await fetch(`${API_URL}/outfits/save`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ prompt, garment_ids: garmentIds }),
+      });
+      return handleResponse(response);
+    });
+  },
+
   getHistory: async () => {
     return apiRequest(async () => {
       const response = await fetch(`${API_URL}/outfits/history`, {
@@ -47,6 +58,16 @@ export const outfitApi = {
         method: 'PUT',
         headers: getHeaders(),
         body: JSON.stringify(data),
+      });
+      return handleResponse(response);
+    });
+  },
+
+  deleteOutfit: async (outfitId: string) => {
+    return apiRequest(async () => {
+      const response = await fetch(`${API_URL}/outfits/${outfitId}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
       });
       return handleResponse(response);
     });

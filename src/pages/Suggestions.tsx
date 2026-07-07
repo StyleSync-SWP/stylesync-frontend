@@ -4,7 +4,6 @@ import { wardrobeApi } from "../services/wardrobeApi";
 import { outfitApi } from "../services/outfitApi";
 import Menu from "../components/Menu";
 import {
-  IoArrowBack,
   IoAdd,
   IoCloudUploadOutline,
   IoClose,
@@ -12,6 +11,7 @@ import {
   IoSend,
   IoRefresh,
   IoHeart,
+  IoArrowBack,
 } from "react-icons/io5";
 import Swal from "sweetalert2";
 
@@ -25,11 +25,13 @@ interface ClothingItem {
 }
 
 interface SuggestedOutfit {
-  id: string;
+  id: string | null;
+  garmentIds: string[];
   items: ClothingItem[];
   description: string;
   rating: number;
   confidence: number;
+  savedToHistory: boolean;
 }
 
 const COLORS = [
@@ -47,6 +49,11 @@ const COLORS = [
   { label: "Brown", bg: "bg-amber-800", border: "border-amber-700" },
   { label: "Beige", bg: "bg-amber-100", border: "border-amber-300" },
 ];
+
+const VARIATION_SUFFIX = " Give me a different variation.";
+
+const stripVariationSuffix = (prompt: string) =>
+  prompt.replace(/(?: Give me a different variation\.)+$/g, "");
 
 export default function Suggestions() {
   const navigate = useNavigate();
@@ -91,8 +98,56 @@ export default function Suggestions() {
   });
   const [suggestedOutfit, setSuggestedOutfit] =
     useState<SuggestedOutfit | null>(null);
+  const [allSuggestedOutfits, setAllSuggestedOutfits] = useState<
+    SuggestedOutfit[]
+  >([]);
+  const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
+  const [originalQuery, setOriginalQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
+  const [favoritedOutfits, setFavoritedOutfits] = useState<Set<string>>(new Set());
+
+  const convertApiOutfits = (
+    outfits: any[],
+    displayPrompt: string,
+  ): SuggestedOutfit[] =>
+    outfits
+      .map((outfit: any) => {
+        const garmentIds: string[] = outfit.garment_ids || [];
+        const items = garmentIds
+          .map((id: string) => wardrobeItems.find((w) => w.id === id))
+          .filter(Boolean) as ClothingItem[];
+
+        return {
+          id: outfit.id ?? null,
+          garmentIds,
+          items,
+          description: displayPrompt,
+          rating: outfit.rating || 0,
+          confidence: 95,
+          savedToHistory: false,
+        };
+      })
+      .filter((outfit) => outfit.items.length > 0);
+
+  const saveOutfitToHistory = async (
+    outfit: SuggestedOutfit,
+  ): Promise<SuggestedOutfit> => {
+    if (outfit.savedToHistory && outfit.id) return outfit;
+    const saved = await outfitApi.saveOutfit(
+      outfit.description,
+      outfit.garmentIds,
+    );
+    return { ...outfit, id: saved.id, savedToHistory: true };
+  };
+
+  const applyOutfitBatch = async (convertedOutfits: SuggestedOutfit[]) => {
+    const savedFirst = await saveOutfitToHistory(convertedOutfits[0]);
+    const allOutfits = [savedFirst, ...convertedOutfits.slice(1)];
+    setAllSuggestedOutfits(allOutfits);
+    setCurrentOutfitIndex(0);
+    setSuggestedOutfit(savedFirst);
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -171,23 +226,38 @@ export default function Suggestions() {
           ? ` Preferred colors: ${selectedColors.join(", ")}.`
           : "";
 
-      const query = textInput
-        ? `${textInput}${colorPart}`
-        : `A ${dropdownValues.style} outfit for ${dropdownValues.occasion} in ${dropdownValues.weather} weather.${colorPart}`;
+      let query = "";
+      if (inputMode === "text") {
+        query = textInput ? `${textInput}${colorPart}` : "";
+      } else {
+        query = `A ${dropdownValues.style} outfit for ${dropdownValues.occasion} in ${dropdownValues.weather} weather.${colorPart}`;
+      }
 
       const response = await outfitApi.suggestOutfit(query);
+      setOriginalQuery(query);
 
-      const items = (response.garment_ids || [])
-        .map((id: string) => wardrobeItems.find((w) => w.id === id))
-        .filter(Boolean) as ClothingItem[];
+      const outfits = Array.isArray(response) ? response : [response];
 
-      setSuggestedOutfit({
-        id: response.id,
-        items,
-        description: response.prompt,
-        rating: response.rating || 0,
-        confidence: 95,
-      });
+      if (!outfits || outfits.length === 0) {
+        console.error("No outfit returned from backend");
+        setIsLoading(false);
+        return;
+      }
+
+      const convertedOutfits = convertApiOutfits(outfits, query);
+
+      if (convertedOutfits.length === 0) {
+        console.error("No valid outfits with matching items");
+        setIsLoading(false);
+        return;
+      }
+
+      await applyOutfitBatch(convertedOutfits);
+
+      // Clear both inputs after submission
+      setTextInput("");
+      setDropdownValues({ occasion: "", style: "", weather: "" });
+      setSelectedColors([]);
     } catch (err) {
       console.error("Failed to get suggestion", err);
     }
@@ -196,29 +266,88 @@ export default function Suggestions() {
   };
 
   const handleTrySimilar = async () => {
-    setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setSuggestedOutfit({
-      ...suggestedOutfit!,
-      id: Date.now().toString(),
-      items: wardrobeItems.slice(1, 4),
-      description: "Here's a similar outfit with a different twist!",
-      rating: Math.floor(Math.random() * 3) + 7,
-      confidence: Math.floor(Math.random() * 20) + 80,
-    });
-    setIsLoading(false);
-    setUserRating(0);
+    if (!suggestedOutfit || allSuggestedOutfits.length === 0) return;
+
+    if (currentOutfitIndex < allSuggestedOutfits.length - 1) {
+      try {
+        const nextIndex = currentOutfitIndex + 1;
+        const saved = await saveOutfitToHistory(allSuggestedOutfits[nextIndex]);
+        const updated = [...allSuggestedOutfits];
+        updated[nextIndex] = saved;
+        setAllSuggestedOutfits(updated);
+        setCurrentOutfitIndex(nextIndex);
+        setSuggestedOutfit(saved);
+        setUserRating(0);
+      } catch (err) {
+        console.error("Failed to save outfit to history", err);
+      }
+    } else {
+      setIsLoading(true);
+      try {
+        const baseQuery = originalQuery || stripVariationSuffix(suggestedOutfit.description);
+        const variationQuery = `${baseQuery}${VARIATION_SUFFIX}`;
+        const response = await outfitApi.suggestOutfit(variationQuery);
+
+        const outfits = Array.isArray(response) ? response : [response];
+
+        if (!outfits || outfits.length === 0) {
+          console.error("No outfit returned from backend");
+          setIsLoading(false);
+          return;
+        }
+
+        const convertedOutfits = convertApiOutfits(outfits, baseQuery);
+
+        if (convertedOutfits.length === 0) {
+          console.error("No valid outfits with matching items");
+          setIsLoading(false);
+          return;
+        }
+
+        await applyOutfitBatch(convertedOutfits);
+      } catch (err) {
+        console.error("Failed to get similar suggestion", err);
+      }
+      setIsLoading(false);
+      setUserRating(0);
+    }
   };
 
-  const handleSaveOutfit = () => {
-    Swal.fire({
-      title: "Outfit Saved!",
-      text: "This outfit has been saved to your past outfit reviews.",
-      icon: "success",
-      background: "#34020E",
-      color: "#fff",
-      confirmButtonColor: "#FE7743",
-    });
+  const handleSaveOutfit = async () => {
+    if (!suggestedOutfit) return;
+
+    try {
+      const saved = await saveOutfitToHistory(suggestedOutfit);
+      if (saved.id !== suggestedOutfit.id || !saved.savedToHistory) {
+        const updated = [...allSuggestedOutfits];
+        updated[currentOutfitIndex] = saved;
+        setAllSuggestedOutfits(updated);
+        setSuggestedOutfit(saved);
+      }
+
+      await outfitApi.rateOutfit(saved.id!, { is_favorite: true });
+
+      setFavoritedOutfits((prev) => new Set(prev).add(saved.id!));
+
+      Swal.fire({
+        title: "Outfit Saved!",
+        text: "This outfit has been saved as a favourite outfit.",
+        icon: "success",
+        background: "#34020E",
+        color: "#fff",
+        confirmButtonColor: "#C4A265",
+      });
+    } catch (err) {
+      console.error("Failed to save outfit as favorite", err);
+      Swal.fire({
+        title: "Error",
+        text: "Failed to save outfit as favorite.",
+        icon: "error",
+        background: "#34020E",
+        color: "#fff",
+        confirmButtonColor: "#C4A265",
+      });
+    }
   };
 
   const handleRating = (rating: number) => {
@@ -242,46 +371,53 @@ export default function Suggestions() {
     ));
   };
 
-  const pillBtn = (active: boolean, border = "border-gray-600") =>
-    `px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all text-white ${
+  const pillBtn = (
+    active: boolean,
+    border = "border-[rgba(196,162,101,0.14)]",
+  ) =>
+    `px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all text-[#F5EDE3] ${
       active
-        ? "border-[#FE7743] scale-105"
-        : `${border} opacity-70 hover:opacity-100`
+        ? "border-[#C4A265] bg-[#C4A265] text-[#1a0508] scale-105"
+        : `${border} opacity-70 hover:opacity-100 hover:border-[rgba(196,162,101,0.35)]`
     }`;
 
   return (
-    <div className="bg-[#34020E] min-h-dvh">
+    <div className="bg-[#0f0204] min-h-dvh">
       <Menu />
 
-      <div className="px-6 sm:px-6 md:px-10 py-7">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-white hover:text-[#FE7743] mb-6 transition-colors"
-        >
-          <IoArrowBack size={24} />
-          <span className="font-medium">Back to Dashboard</span>
-        </button>
+      <div className="px-10 py-10 max-w-[1360px] mx-auto">
+        {/* Page header */}
+        <div className="flex justify-between items-end mb-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 text-[rgba(245,237,227,0.4)] hover:text-[#C4A265] transition-colors"
+            >
+              <IoArrowBack size={24} />
+            </button>
+            <h1 className="font-serif text-[36px] text-[#F5EDE3] font-medium">
+              Outfit Suggestions
+            </h1>
+          </div>
+        </div>
+        <div className="h-px bg-[rgba(196,162,101,0.09)] mb-8"></div>
 
-        <h1 className="text-3xl font-bold text-white mb-6">
-          Outfit Suggestions
-        </h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-[18px]">
           {/* Section 1: Clothes Selection */}
-          <div className="bg-gray-800 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
+          <div className="bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-xl p-6">
+            <h2 className="font-serif text-xl text-[#F5EDE3] font-medium mb-4">
               Select Your Clothes
             </h2>
 
             <div className="flex gap-2 mb-4">
               <button
                 onClick={() => setIsUploadModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[#FE7743] text-black rounded-lg hover:bg-[#FF9A5C] transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-[#C4A265] text-[#1a0508] rounded-lg hover:bg-[rgba(196,162,101,0.8)] transition-colors font-semibold text-sm"
               >
                 <IoAdd size={20} />
                 Upload New
               </button>
-              <span className="text-gray-400 text-sm self-center">
+              <span className="text-[rgba(245,237,227,0.4)] text-sm self-center">
                 {selectedClothes.length} selected
               </span>
             </div>
@@ -293,11 +429,11 @@ export default function Suggestions() {
                   onClick={() => toggleClothingSelection(item)}
                   className={`relative cursor-pointer rounded-lg overflow-hidden transition-all ${
                     selectedClothes.find((c) => c.id === item.id)
-                      ? "ring-2 ring-[#FE7743]"
-                      : "hover:ring-2 hover:ring-gray-600"
+                      ? "ring-2 ring-[#C4A265]"
+                      : "hover:ring-2 hover:ring-[rgba(196,162,101,0.35)]"
                   }`}
                 >
-                  <div className="aspect-square bg-gray-700">
+                  <div className="aspect-square bg-[#2a0a10]">
                     <img
                       src={item.image}
                       alt={item.name}
@@ -305,28 +441,32 @@ export default function Suggestions() {
                     />
                   </div>
                   {selectedClothes.find((c) => c.id === item.id) && (
-                    <div className="absolute top-2 right-2 bg-[#FE7743] rounded-full p-1">
-                      <IoHeart size={16} className="text-black" />
+                    <div className="absolute top-2 right-2 bg-[#C4A265] rounded-full p-1">
+                      <IoHeart size={16} className="text-[#1a0508]" />
                     </div>
                   )}
                   <div className="p-2">
-                    <p className="text-white text-xs truncate">{item.name}</p>
-                    <p className="text-gray-400 text-xs">{item.category}</p>
+                    <p className="text-[#F5EDE3] text-xs truncate">
+                      {item.name}
+                    </p>
+                    <p className="text-[rgba(245,237,227,0.4)] text-xs">
+                      {item.category}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
 
             {selectedClothes.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-gray-700">
-                <h3 className="text-white text-sm font-medium mb-2">
+              <div className="mt-4 pt-4 border-t border-[rgba(196,162,101,0.12)]">
+                <h3 className="text-[#F5EDE3] text-sm font-medium mb-2">
                   Selected Items:
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedClothes.map((item) => (
                     <span
                       key={item.id}
-                      className="text-xs bg-[#273F4F] text-white px-2 py-1 rounded"
+                      className="text-xs bg-[#34020E] text-[#F5EDE3] px-2 py-1 rounded"
                     >
                       {item.name}
                     </span>
@@ -337,8 +477,8 @@ export default function Suggestions() {
           </div>
 
           {/* Section 2: Input Section */}
-          <div className="bg-gray-800 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
+          <div className="bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-xl p-6">
+            <h2 className="font-serif text-xl text-[#F5EDE3] font-medium mb-4">
               Provide Your Preferences
             </h2>
 
@@ -347,8 +487,8 @@ export default function Suggestions() {
                 onClick={() => setInputMode("text")}
                 className={`flex-1 py-2 rounded-lg font-medium transition-all ${
                   inputMode === "text"
-                    ? "bg-[#FE7743] text-black"
-                    : "bg-gray-700 text-white hover:bg-gray-600"
+                    ? "bg-[#C4A265] text-[#1a0508]"
+                    : "bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)]"
                 }`}
               >
                 <IoChatbubble className="inline mr-2" />
@@ -358,8 +498,8 @@ export default function Suggestions() {
                 onClick={() => setInputMode("dropdown")}
                 className={`flex-1 py-2 rounded-lg font-medium transition-all ${
                   inputMode === "dropdown"
-                    ? "bg-[#FE7743] text-black"
-                    : "bg-gray-700 text-white hover:bg-gray-600"
+                    ? "bg-[#C4A265] text-[#1a0508]"
+                    : "bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)]"
                 }`}
               >
                 Dropdowns
@@ -372,13 +512,15 @@ export default function Suggestions() {
                   value={textInput}
                   onChange={(e) => setTextInput(e.target.value)}
                   placeholder="Describe what kind of outfit you're looking for... (e.g., 'I need a casual outfit for a coffee date')"
-                  className="w-full bg-gray-700 text-white border-gray-600 rounded-lg p-4 min-h-32 resize-none"
+                  className="w-full bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg p-4 min-h-32 resize-none focus:outline-none focus:border-[rgba(196,162,101,0.4)]"
                 />
               </div>
             ) : (
               <div className="space-y-4">
                 <div>
-                  <label className="text-white block mb-2">Occasion</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Occasion
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {[
                       "Casual",
@@ -411,7 +553,9 @@ export default function Suggestions() {
                 </div>
 
                 <div>
-                  <label className="text-white block mb-2">Style</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Style
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {[
                       "Minimalist",
@@ -444,7 +588,9 @@ export default function Suggestions() {
                 </div>
 
                 <div>
-                  <label className="text-white block mb-2">Weather</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Weather
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {["Hot", "Warm", "Cool", "Cold", "Rainy"].map((option) => (
                       <button
@@ -470,7 +616,9 @@ export default function Suggestions() {
                 </div>
 
                 <div>
-                  <label className="text-white block mb-2">Colors</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Colors
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {COLORS.map(({ label, bg, border }) => (
                       <button
@@ -487,7 +635,7 @@ export default function Suggestions() {
                     ))}
                   </div>
                   {selectedColors.length > 0 && (
-                    <p className="text-gray-400 text-xs mt-2">
+                    <p className="text-[rgba(245,237,227,0.4)] text-xs mt-2">
                       Selected: {selectedColors.join(", ")}
                     </p>
                   )}
@@ -498,11 +646,11 @@ export default function Suggestions() {
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="w-full mt-6 bg-[#FE7743] text-black font-semibold py-3 rounded-lg hover:bg-[#FF9A5C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full mt-6 bg-[#C4A265] text-[#1a0508] font-semibold py-3 rounded-lg hover:bg-[rgba(196,162,101,0.8)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black" />
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#1a0508]" />
                   Generating...
                 </>
               ) : (
@@ -517,46 +665,44 @@ export default function Suggestions() {
 
         {/* Output Section */}
         {suggestedOutfit && !isLoading && (
-          <div className="mt-6 bg-gray-800 rounded-xl p-6">
+          <div className="mt-8 bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-xl p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-              <h2 className="text-xl font-bold text-white text-center md:text-left w-full md:w-auto">Suggested Outfit</h2>
+              <h2 className="font-serif text-xl text-[#F5EDE3] font-medium text-center md:text-left w-full md:w-auto">
+                Suggested Outfit
+              </h2>
               <div className="flex flex-row md:flex-row gap-2 w-full md:w-auto">
                 <button
                   onClick={handleTrySimilar}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#0f0204] border border-[rgba(196,162,101,0.14)] text-[#F5EDE3] rounded-lg hover:border-[rgba(196,162,101,0.35)] transition-colors"
                 >
                   <IoRefresh size={18} />
                   Try Similar
                 </button>
                 <button
                   onClick={handleSaveOutfit}
-                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#FE7743] text-black rounded-lg hover:bg-[#FF9A5C] transition-colors"
+                  className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#C4A265] text-[#1a0508] rounded-lg hover:bg-[rgba(196,162,101,0.8)] transition-colors"
                 >
                   <IoHeart size={18} />
-                  Save Outfit
+                  Add to favourites
                 </button>
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-6 mt-2">
               <div className="space-y-0.5 w-full mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
                   <div>
-                    <h3 className="text-white font-medium mb-2">Description</h3>
-                    <p className="text-gray-300">{suggestedOutfit.description}</p>
+                    <h3 className="text-[#F5EDE3] font-medium mb-2">
+                      Description
+                    </h3>
+                    <p className="text-[rgba(245,237,227,0.6)]">
+                      {suggestedOutfit.description}
+                    </p>
                   </div>
                   <div>
-                    <h3 className="text-white font-medium mb-2">Model Confidence</h3>
-                    <p className="text-gray-300 mb-2">{suggestedOutfit.confidence}%</p>
-                    <div className="w-full bg-gray-700 rounded-full h-2">
-                      <div
-                        className="bg-[#FE7743] h-2 rounded-full transition-all"
-                        style={{ width: `${suggestedOutfit.confidence}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-medium mb-2">Your Rating (1-10)</h3>
+                    <h3 className="text-[#F5EDE3] font-medium mb-2">
+                      Your Rating (1-10)
+                    </h3>
                     <div className="flex gap-1 flex-wrap justify-center">
                       {renderStars(userRating || suggestedOutfit.rating, true)}
                     </div>
@@ -565,21 +711,21 @@ export default function Suggestions() {
               </div>
 
               <div>
-                <h3 className="text-white font-medium mb-3">Items</h3>
+                <h3 className="text-[#F5EDE3] font-medium mb-3">Items</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                   {suggestedOutfit.items.map((item, index) => (
                     <div
                       key={index}
-                      className="bg-gray-700 rounded-lg overflow-hidden"
+                      className="bg-[#0f0204] border border-[rgba(196,162,101,0.08)] rounded-lg overflow-hidden"
                     >
-                      <div className="aspect-square">
+                      <div className="aspect-square bg-[#2a0a10]">
                         <img
                           src={item.image}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
-                      <p className="text-white text-xs p-2 truncate">
+                      <p className="text-[#F5EDE3] text-xs p-2 truncate">
                         {item.name}
                       </p>
                     </div>
@@ -594,12 +740,14 @@ export default function Suggestions() {
       {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#34020E] rounded-2xl p-6 max-w-lg w-full">
+          <div className="bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-2xl p-6 max-w-lg w-full">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Upload Clothes</h2>
+              <h2 className="font-serif text-2xl text-[#F5EDE3] font-medium">
+                Upload Clothes
+              </h2>
               <button
                 onClick={() => setIsUploadModalOpen(false)}
-                className="text-white hover:text-[#FE7743]"
+                className="text-[rgba(245,237,227,0.5)] hover:text-[#C4A265] transition-colors"
               >
                 <IoClose size={24} />
               </button>
@@ -612,19 +760,19 @@ export default function Suggestions() {
               onDrop={!isLoading ? handleDrop : undefined}
               className={`block border-2 border-dashed rounded-xl p-10 text-center transition-all ${
                 isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-              } ${dragActive ? "border-[#FE7743] bg-[#FE7743] bg-opacity-10" : "border-gray-600"}`}
+              } ${dragActive ? "border-[#C4A265] bg-[rgba(196,162,101,0.1)]" : "border-[rgba(196,162,101,0.14)]"}`}
             >
               <IoCloudUploadOutline
                 size={48}
-                className="mx-auto text-gray-400 mb-4"
+                className="mx-auto text-[rgba(245,237,227,0.3)] mb-4"
               />
-              <p className="text-white mb-2">
+              <p className="text-[#F5EDE3] mb-2">
                 Drag and drop your clothes images here
               </p>
-              <p className="text-white text-sm mb-4">
+              <p className="text-[rgba(245,237,227,0.5)] text-sm mb-4">
                 or click anywhere to browse — you can select multiple files
               </p>
-              <div className="btn-primary btn-primary-orange inline-block text-white">
+              <div className="inline-block bg-[#C4A265] text-[#1a0508] px-4 py-2 rounded-lg font-semibold text-sm">
                 Browse Files
               </div>
               <input

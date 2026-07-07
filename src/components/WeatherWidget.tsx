@@ -308,7 +308,7 @@ export default function WeatherWidget() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full p-4">
-      <div className="flex flex-col items-center justify-center bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl py-4 px-20 w-full h-full min-h-[250px] max-w-[800px] shadow-lg">
+      <div className="flex flex-col items-center justify-center bg-[rgba(196,162,101,0.08)] border border-[rgba(196,162,101,0.14)] rounded-2xl py-4 px-20 w-full h-full min-h-[250px] max-w-[800px] shadow-lg">
         {/* Location */}
         <div className="flex items-center justify-center gap-1 mb-2">
           <svg
