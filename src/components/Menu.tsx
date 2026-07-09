@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { IoMenu } from "react-icons/io5";
 import { RxCross1 } from "react-icons/rx";
-import { Link } from "react-router-dom";
 import Logo from "./Logo";
 import useAuthStore from "../stores/authStore";
 
@@ -56,9 +55,6 @@ export default function Navbar() {
         }`}
       >
         <ul className="flex flex-col items-center gap-3 py-2 text-white bg-[#34020E]">
-          <li className="hover:cursor-pointer">
-            <Link to="/settings">Settings</Link>
-          </li>
           <li className="hover:cursor-pointer" onClick={handleLogout}>
             Log out
           </li>
@@ -66,14 +62,6 @@ export default function Navbar() {
       </div>
       <div id="horizontalLinks" className="hidden md:flex md:items-center">
         <ul className="flex text-white md:gap-4 lg:gap-8">
-          <li
-            className="px-8 py-0.5 mr-1 border-2 border-collapse border-white rounded-r-lg rounded-l-lg font-bold hover:cursor-pointer"
-            onClick={() => {
-              navigate("/settings");
-            }}
-          >
-            Settings
-          </li>
           <li
             className="px-8 py-0.5 text-black bg-white hover:cursor-pointer rounded-r-lg rounded-l-lg font-bold"
             onClick={handleLogout}

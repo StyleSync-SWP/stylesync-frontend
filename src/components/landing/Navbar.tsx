@@ -10,7 +10,7 @@ export default function Navbar() {
   const [isOpened, setIsOpened] = useState(false);
 
   return (
-    <nav className="flex justify-around bg-[#34020E]">
+    <nav className="flex justify-around bg-[#34020E] border-b border-[rgba(196,162,101,0.1)]">
       <Logo
         variant="white"
         className="w-[161px] h-[25px] mt-5 mb-3 mr-10"
@@ -48,77 +48,77 @@ export default function Navbar() {
           isOpened ? "mt-[49px] max-h-48 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <ul className="flex flex-col items-center gap-3 py-2 text-white bg-[#34020E]">
+        <ul className="flex flex-col items-center gap-3 py-1 text-white bg-[#34020E]">
           <li
-            className="hover:cursor-pointer"
+            className="hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors"
             onClick={() =>
               document
                 .getElementById("howItWorksSection")
                 ?.scrollIntoView({ behavior: "smooth" })
             }
           >
-            Features and uses
+            How it works
           </li>
           <li
-            className="hover:cursor-pointer"
+            className="hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors"
             onClick={() =>
               document
                 .getElementById("faqSection")
                 ?.scrollIntoView({ behavior: "smooth" })
             }
           >
-            More Information
+            FAQ
           </li>
-          <li className="hover:cursor-pointer">
-            <Link to="/login">Login</Link>
+          <li className="hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors">
+            <Link to="/login">Log in</Link>
           </li>
           <li
-            className="hover:cursor-pointer"
+            className="hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors"
             onClick={() => {
               navigate("/signup");
             }}
           >
-            Sign up
+            Create account
           </li>
         </ul>
       </div>
       <div id="horizontalLinks" className="hidden md:flex md:items-center">
         <ul className="flex text-white md:gap-4 lg:gap-8">
           <li
-            className="pb-0.5 pt-1 hover:cursor-pointer"
+            className="px-6 py-2 text-sm hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors"
             onClick={() =>
               document
                 .getElementById("howItWorksSection")
                 ?.scrollIntoView({ behavior: "smooth" })
             }
           >
-            Features and uses
+            How it works
           </li>
           <li
-            className="pb-0.5 pt-1 hover:cursor-pointer"
+            className="px-6 py-2 text-sm hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors"
             onClick={() =>
               document
                 .getElementById("faqSection")
                 ?.scrollIntoView({ behavior: "smooth" })
             }
           >
-            More Information
+            FAQ
           </li>
           <li
-            className="px-8 py-0.5 mr-2 border-2 border-collapse border-white rounded-r-lg rounded-l-lg font-bold hover:cursor-pointer"
+            className="px-6 py-2 text-sm hover:cursor-pointer text-[rgba(245,237,227,0.5)] hover:text-[rgba(245,237,227,0.8)] transition-colors"
             onClick={() => {
               navigate("/login");
             }}
           >
-            Login
+            Log in
           </li>
           <li
-            className="px-8 py-0.5 text-black bg-white hover:cursor-pointer rounded-r-lg rounded-l-lg font-bold"
+            className="px-6 py-2 text-sm bg-[#F5EDE3] text-[#34020E] hover:cursor-pointer font-semibold hover:bg-[rgba(245,237,227,0.9)] transition-colors"
             onClick={() => {
               navigate("/signup");
             }}
           >
-            Sign up
+            Create account
           </li>
         </ul>
       </div>

@@ -8,7 +8,6 @@ import Dashboard from "./pages/Dashboard";
 import Wardrobe from "./pages/Wardrobe";
 import Suggestions from "./pages/Suggestions";
 import PastOutfits from "./pages/PastOutfits";
-import Settings from "./pages/Settings";
 import StylePreferenceOnboarding from "./pages/StylePreferenceOnboarding";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -35,7 +34,6 @@ export default function App() {
           <Route path="/wardrobe" element={<Wardrobe />} />
           <Route path="/suggestions" element={<Suggestions />} />
           <Route path="/past-outfits" element={<PastOutfits />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/style-preference-onboarding" element={<StylePreferenceOnboarding />} />
         </Route>
         

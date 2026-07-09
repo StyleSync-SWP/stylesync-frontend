@@ -1,25 +1,18 @@
-import React from "react";
-
 export default function HowItWorksSection() {
-  function InfoCard({ number, image, title, text }) {
+  function InfoCard({ number, title, text }) {
     return (
-      <div className="bg-white flex flex-col items-center px-3 py-5 gap-5 rounded-xl relative w-full">
-        <div className="bg-red-400 rounded-full absolute z-10 w-[37px] h-[37px] flex items-center justify-center -top-4">
-          <p className="font-bold text-white">{number}</p>
-        </div>
+      <div className="bg-white flex flex-col items-center px-6 py-8 gap-4 rounded-xl relative w-full border-t-2 border-[#34020E] shadow-lg">
+        <p className="font-serif text-5xl text-[rgba(52,2,14,0.12)] font-semibold leading-none mb-2">
+          {number < 10 ? `0${number}` : number}
+        </p>
 
-        <img
-          src={image}
-          alt={title}
-          className="w-full h-[220px] object-cover rounded-lg mt-2"
-          loading="lazy"
-        />
-
-        <h1 className="text-sm text-[#34020E] font-medium md:text-2xl text-center">
+        <h3 className="font-serif text-2xl text-[#34020E] font-medium text-center">
           {title}
-        </h1>
+        </h3>
 
-        <p className="mb-4 text-center text-red-400">{text}</p>
+        <p className="text-center text-[rgba(26,5,8,0.48)] text-lg leading-relaxed font-light">
+          {text}
+        </p>
       </div>
     );
   }
@@ -27,44 +20,32 @@ export default function HowItWorksSection() {
   return (
     <div
       id="howItWorksSection"
-      className="bg-[#34020E] px-10 lg:px-5 xl:px-10 py-20 flex flex-col items-center min-h-dvh"
+      className="bg-[#f5ede8] px-10 lg:px-5 xl:px-10 py-20 flex flex-col items-center min-h-dvh"
     >
-      <h1 className="mb-15 text-2xl font-bold md:text-5xl md:mb-17 text-white text-center">
-        How your assistant works
-      </h1>
+      <p className="text-md tracking-widest text-[#C4A265] uppercase mb-4 text-center">
+        How it works
+      </p>
+      <h2 className="font-serif text-3xl md:text-5xl text-[#34020E] font-semibold mb-25 text-center">
+        Three steps to a better wardrobe
+      </h2>
 
-      {/* <p className="text-red-100 text-sm md:text-lg mb-15 px-5 text-center max-w-2xl">
-        Our assistant offers a wide range of features that will revolutionize
-        and optimize your wardrobe.
-      </p> */}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-10 w-full max-w-7xl">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-9 w-full max-w-6xl xl:px-0 md:px-[10%] lg:px-[20%]">
         <InfoCard
           number={1}
-          image="./images/landing1.jpeg"
-          title="Snap & Upload"
-          text="Create your digital closet in seconds! Just snap a photo of your clothes."
+          title="Upload your wardrobe"
+          text="Add photos of your clothes and build your personal digital wardrobe in minutes."
         />
 
         <InfoCard
           number={2}
-          image="./images/landing2.jpg"
-          title="Match Your Vibe"
-          text="Feeling energetic or going for effortless chic? Write down your mood or today's plan."
+          title="Define your style"
+          text="Take a quick style quiz to help our AI understand your preferences perfectly."
         />
 
         <InfoCard
           number={3}
-          image="./images/landing3.jpg"
-          title="AI Magic Is On!"
-          text="Sit back and relax. Let your assistant to do the magic."
-        />
-
-        <InfoCard
-          number={4}
-          image="./images/landing4.jpeg"
-          title="Pick & Shine"
-          text="Your look is ready! Step out the door and get ready to be the center of attention."
+          title="Get daily suggestions"
+          text="Wake up to curated outfit ideas matched to your style and today's weather."
         />
       </div>
     </div>

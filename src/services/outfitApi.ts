@@ -19,23 +19,24 @@ const handleResponse = async (response: Response) => {
   return response.json();
 };
 
-interface OutfitSuggestPayload {
-  query: string;
-  explicit_filters?: {
-    occasions: string[];
-    styles: string[];
-    colors: string[];
-  } | null;
-  exclude_garment_ids?: string[];
-}
-
 export const outfitApi = {
-  suggestOutfit: async (payload: OutfitSuggestPayload) => {
+  suggestOutfit: async (query: string) => {
     return apiRequest(async () => {
       const response = await fetch(`${API_URL}/outfits/suggest`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ query }),
+      });
+      return handleResponse(response);
+    });
+  },
+
+  saveOutfit: async (prompt: string, garmentIds: string[]) => {
+    return apiRequest(async () => {
+      const response = await fetch(`${API_URL}/outfits/save`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ prompt, garment_ids: garmentIds }),
       });
       return handleResponse(response);
     });

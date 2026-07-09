@@ -14,27 +14,6 @@ import {
 import { FiChevronDown } from "react-icons/fi";
 import LoadingOverlay from "../components/LoadingOverlay";
 
-const CATEGORY_MAP: Record<string, string> = {
-    't-shirt': 'Tops', 'shirt': 'Tops', 'blouse': 'Tops',
-    'hoodie': 'Tops', 'sweater': 'Tops', 'cardigan': 'Tops',
-    'vest': 'Tops', 'crop top': 'Tops', 'polo shirt': 'Tops',
-    'turtleneck': 'Tops',
-    'skirt': 'Bottoms', 'pants': 'Bottoms', 'jeans': 'Bottoms',
-    'shorts': 'Bottoms', 'leggings': 'Bottoms', 'wide-leg pants': 'Bottoms',
-    'mini skirt': 'Bottoms', 'midi skirt': 'Bottoms', 'maxi skirt': 'Bottoms',
-    'jacket': 'Outerwear', 'blazer': 'Outerwear', 'coat': 'Outerwear',
-    'trench coat': 'Outerwear', 'puffer jacket': 'Outerwear', 'denim jacket': 'Outerwear',
-    'dress': 'Dresses', 'jumpsuit': 'Dresses', 'romper': 'Dresses',
-    'sneakers': 'Shoes', 'boots': 'Shoes', 'sandals': 'Shoes',
-    'heels': 'Shoes', 'loafers': 'Shoes', 'mules': 'Shoes',
-    'ankle boots': 'Shoes', 'platform shoes': 'Shoes',
-    'bag': 'Accessories', 'belt': 'Accessories', 'scarf': 'Accessories',
-    'hat': 'Accessories', 'socks': 'Accessories', 'gloves': 'Accessories',
-    'sunglasses': 'Accessories', 'jewellery': 'Accessories',
-    'backpack': 'Accessories', 'tote bag': 'Accessories',
-    'swimsuit': 'Accessories', 'bikini top': 'Accessories', 'bikini bottom': 'Accessories',
-}
-
 interface ClothingItem {
   id: string;
   name: string;
@@ -42,18 +21,9 @@ interface ClothingItem {
   code: string;
   color: string;
   style: string;
-  category: string;      // группа для фильтрации: Tops, Bottoms, ...
-  rawCategory: string;   // оригинал: t-shirt, jacket, ...
+  category: string;
   image: string;
-}
-
-interface SuggestionItem {
-  id: string;
-  name: string;
-  brand: string;
-  price: string;
-  image: string;
-  reason: string;
+  is_favorite?: boolean;
 }
 
 export default function Wardrobe() {
@@ -66,6 +36,8 @@ export default function Wardrobe() {
       try {
         setIsLoading(true);
         const data = await wardrobeApi.getWardrobe();
+        console.log("Wardrobe API returned:", data);
+        console.log("Length:", data.length);
         const mappedData = data.map((item: any) => ({
           id: item.id,
           name: item.name,
@@ -73,9 +45,9 @@ export default function Wardrobe() {
           code: item.code || "",
           color: item.color || "",
           style: item.style || "",
-          category: CATEGORY_MAP[item.category?.toLowerCase()] || "Accessories",
-          rawCategory: item.category || "",
+          category: item.category || "Uncategorized",
           image: item.image_base64,
+          is_favorite: item.is_favorite || false,
         }));
         setClothes(mappedData);
       } catch (err) {
@@ -87,38 +59,6 @@ export default function Wardrobe() {
     fetchClothes();
   }, []);
 
-  const buySuggestions: SuggestionItem[] = [
-    {
-      id: "b1",
-      name: "Beige Trench Coat",
-      brand: "Burberry",
-      price: "$890",
-      image:
-        "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400",
-      reason: "Perfect match for your casual style",
-    },
-    {
-      id: "b2",
-      name: "White Sneakers",
-      brand: "Nike",
-      price: "$120",
-      image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400",
-      reason: "Complements your existing wardrobe",
-    },
-  ];
-
-  const sellSuggestions: SuggestionItem[] = [
-    {
-      id: "s1",
-      name: "Old Graphic Tee",
-      brand: "Various",
-      price: "$15",
-      image:
-        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400",
-      reason: "Doesn't match your current style",
-    },
-  ];
-
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -126,22 +66,19 @@ export default function Wardrobe() {
   const [selectedItem, setSelectedItem] = useState<ClothingItem | null>(null);
   const [editingItem, setEditingItem] = useState<ClothingItem | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadMethod, setUploadMethod] = useState<"upload" | "search">(
-    "upload",
+  const [selectedForDeletion, setSelectedForDeletion] = useState<Set<string>>(
+    new Set(),
   );
-  const [activeTab, setActiveTab] = useState<"myWardrobe" | "buy" | "sell">(
-    "myWardrobe",
-  );
+  const [isUploading, setIsUploading] = useState(false);
 
+  // Dynamically generate categories from actual wardrobe data
   const categories = [
     "All",
-    "Tops",
-    "Bottoms",
-    "Outerwear",
-    "Dresses",
-    "Shoes",
-    "Accessories",
-  ];
+    "Favorites",
+    ...Array.from(
+      new Set(clothes.map((item) => item.category).filter(Boolean)),
+    ),
+  ].sort();
 
   const filteredClothes = clothes.filter((item) => {
     const matchesSearch =
@@ -149,7 +86,11 @@ export default function Wardrobe() {
       item.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.color.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory =
-      selectedCategory === "All" || item.category === selectedCategory;
+      selectedCategory === "All"
+        ? true
+        : selectedCategory === "Favorites"
+          ? item.is_favorite
+          : item.category.toLowerCase() === selectedCategory.toLowerCase();
     return matchesSearch && matchesCategory;
   });
 
@@ -177,7 +118,7 @@ export default function Wardrobe() {
   const handleFileUpload = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     try {
-      setIsLoading(true);
+      setIsUploading(true);
       const newItems: ClothingItem[] = [];
 
       for (const file of fileArray) {
@@ -203,13 +144,26 @@ export default function Wardrobe() {
           code: newGarment.code || "",
           color: newGarment.color || "",
           style: newGarment.style || "",
-          category: CATEGORY_MAP[newGarment.category?.toLowerCase()] || "Accessories",
-          rawCategory: newGarment.category || "",
+          category: newGarment.category || "Uncategorized",
           image: newGarment.image_base64,
         });
       }
 
-      setClothes((prev) => [...prev, ...newItems]);
+      // Refresh wardrobe from backend after successful upload to fix display issue
+      const data = await wardrobeApi.getWardrobe();
+      const mappedData = data.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        brand: item.brand || "",
+        code: item.code || "",
+        color: item.color || "",
+        style: item.style || "",
+        category: item.category || "Uncategorized",
+        image: item.image_base64,
+        is_favorite: item.is_favorite || false,
+      }));
+      console.log("Mapped:", mappedData);
+      setClothes(mappedData);
       setIsUploadModalOpen(false);
     } catch (err) {
       console.error("Failed to upload garments", err);
@@ -217,24 +171,8 @@ export default function Wardrobe() {
         "Failed to upload one or more images. They might be too large or the server is busy.",
       );
     } finally {
-      setIsLoading(false);
+      setIsUploading(false);
     }
-  };
-
-  const handleOnlineSearch = () => {
-    const newClothing: ClothingItem = {
-      id: Date.now().toString(),
-      name: "Searched Item",
-      brand: "Brand Name",
-      code: "CODE123",
-      color: "Various",
-      style: "Modern",
-      category: "Tops",
-      image:
-        "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=400",
-    };
-    setClothes([...clothes, newClothing]);
-    setIsUploadModalOpen(false);
   };
 
   const handleItemClick = (item: ClothingItem) => {
@@ -243,21 +181,23 @@ export default function Wardrobe() {
     setIsDetailModalOpen(true);
   };
 
+  const formatCategory = (cat: string) =>
+    cat
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+
   const handleSaveEdit = async () => {
     if (editingItem) {
       try {
         const updateData = {
           name: editingItem.name,
           brand: editingItem.brand,
-          code: editingItem.code,
           color: editingItem.color,
           style: editingItem.style,
           category: editingItem.category,
         };
-        const updated = await wardrobeApi.updateGarment(
-          editingItem.id,
-          updateData,
-        );
+        await wardrobeApi.updateGarment(editingItem.id, updateData);
 
         setClothes(
           clothes.map((item) =>
@@ -289,322 +229,281 @@ export default function Wardrobe() {
     }
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedForDeletion.size === 0) return;
+
+    try {
+      setIsLoading(true);
+      for (const id of selectedForDeletion) {
+        await wardrobeApi.deleteGarment(id);
+      }
+      setClothes(clothes.filter((item) => !selectedForDeletion.has(item.id)));
+      setSelectedForDeletion(new Set());
+    } catch (err) {
+      console.error("Failed to delete garments", err);
+      alert("Failed to delete one or more garments.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCleanAll = async () => {
+    if (clothes.length === 0) return;
+
+    if (
+      window.confirm(
+        "Are you sure you want to delete all items from your wardrobe? This action cannot be undone.",
+      )
+    ) {
+      try {
+        setIsLoading(true);
+        for (const item of clothes) {
+          await wardrobeApi.deleteGarment(item.id);
+        }
+        setClothes([]);
+        setSelectedForDeletion(new Set());
+      } catch (err) {
+        console.error("Failed to clean wardrobe", err);
+        alert("Failed to clean wardrobe.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedForDeletion((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   return (
-    <div className="bg-[#34020E] min-h-dvh">
+    <div className="bg-[#0f0204] min-h-dvh">
       {isLoading && <LoadingOverlay />}
 
       <Menu />
 
-      <div className="px-6 sm:px-6 md:px-10 py-7">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-white hover:text-[#FE7743] mb-6 transition-colors"
-        >
-          <IoArrowBack size={24} />
-          <span className="font-medium">Back to Dashboard</span>
-        </button>
+      <div className="px-10 py-10 max-w-[1360px] mx-auto">
+        {/* Page header */}
+        <div className="flex justify-between items-end mb-3">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="flex items-center gap-2 text-[rgba(245,237,227,0.4)] hover:text-[#C4A265] transition-colors"
+            >
+              <IoArrowBack size={24} />
+            </button>
+            <h1 className="font-serif text-[36px] text-[#F5EDE3] font-medium">
+              My Clothes
+            </h1>
+          </div>
+        </div>
+        <div className="h-px bg-[rgba(196,162,101,0.09)] mb-8"></div>
 
-        {/* Tab Menu */}
-        <div className="flex gap-1.5 mb-6 bg-gray-900/50 p-1.5 rounded-2xl backdrop-blur-sm border border-gray-700/50">
+        {/* Search and Filter Section – mobile‑friendly restructure */}
+        <div className="flex flex-wrap gap-4 mb-8 items-center">
+          {/* Search input */}
+          <div className="relative flex-1 min-w-0 md:flex-[2]">
+            <IoSearch
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[rgba(245,237,227,0.4)]"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search by name, brand or color..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[#1a0508] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg pl-12 pr-4 py-3 focus:outline-none focus:border-[rgba(196,162,101,0.4)]"
+            />
+          </div>
+
+          {/* Category dropdown */}
+          <div className="relative bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-lg flex-1 md:flex-none md:w-auto">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="appearance-none bg-transparent text-[#F5EDE3] w-full py-3 pl-4 pr-10 focus:outline-none cursor-pointer"
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat} className="bg-[#1a0508]">
+                  {formatCategory(cat)}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute right-4 top-1/2 transform -translate-y-1/2 text-[rgba(245,237,227,0.4)]">
+              <FiChevronDown size={16} />
+            </div>
+          </div>
+
+          {/* Add Clothes button – full width on mobile */}
           <button
-            onClick={() => setActiveTab("myWardrobe")}
-            className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-              activeTab === "myWardrobe"
-                ? "bg-gradient-to-r from-[#FE7743] to-[#FF9A5C] text-black shadow-lg shadow-[#FE7743]/30"
-                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+            onClick={() => setIsUploadModalOpen(true)}
+            disabled={isUploading}
+            className={`flex items-center justify-center gap-2 bg-[#C4A265] text-[#1a0508] px-6 py-3 rounded-lg font-semibold hover:bg-[rgba(196,162,101,0.8)] transition-colors w-full md:w-auto ${
+              isUploading ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
-            <span className="hidden sm:inline">My Wardrobe</span>
-            <span className="sm:hidden">Wardrobe</span>
+            <IoAdd size={18} />
+            Add Clothes
           </button>
+
+          {/* Delete Selected button – full width on mobile, only shown when items are selected */}
+          {selectedForDeletion.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              disabled={isUploading}
+              className={`flex items-center justify-center gap-2 bg-[#1a0508] text-[#F5EDE3] px-4 py-3 font-medium hover:bg-[#34020E] transition-colors border border-[rgba(196,162,101,0.14)] w-full md:w-auto ${
+                isUploading ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              Delete Selected ({selectedForDeletion.size})
+            </button>
+          )}
+
+          {/* Clean All button – full width on mobile */}
           <button
-            onClick={() => setActiveTab("buy")}
-            className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-              activeTab === "buy"
-                ? "bg-gradient-to-r from-[#FE7743] to-[#FF9A5C] text-black shadow-lg shadow-[#FE7743]/30"
-                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
+            onClick={handleCleanAll}
+            disabled={isUploading}
+            className={`flex items-center justify-center gap-2 bg-[#1a0508] text-[#F5EDE3] px-4 py-3 font-medium hover:bg-[#34020E] transition-colors border border-[rgba(196,162,101,0.14)] w-full md:w-auto ${
+              isUploading ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
-            <span className="hidden sm:inline">Suggestions to buy</span>
-            <span className="sm:hidden">To buy</span>
-          </button>
-          <button
-            onClick={() => setActiveTab("sell")}
-            className={`flex-1 px-2 sm:px-4 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
-              activeTab === "sell"
-                ? "bg-gradient-to-r from-[#FE7743] to-[#FF9A5C] text-black shadow-lg shadow-[#FE7743]/30"
-                : "text-gray-400 hover:text-white hover:bg-gray-800/50"
-            }`}
-          >
-            <span className="hidden sm:inline">Suggestions to sell</span>
-            <span className="sm:hidden">To sell</span>
+            Clean All
           </button>
         </div>
 
-        {/* Search and Filter Section - Only for My Wardrobe */}
-        {activeTab === "myWardrobe" && (
-          <div className="flex flex-col md:flex-row gap-3 mb-6 py-2 justify-between">
-            <div className="relative w-full sm:flex-1 py-2 sm:py-1 sm:max-w-50">
-              <IoSearch
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={16}
-              />
-              <input
-                type="text"
-                placeholder="Search by name, brand or color..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input input-idle pl-10 bg-gray-800 text-white border-gray-600 rounded-md w-full sm:min-w-65 sm:text-sm py-2 text-base sm:py-1"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 flex-nowrap justify-between">
-              <div className="relative sm:justify-between flex mr-4 bg-gray-800 px-2 min-w-40 sm:max-w-50 rounded-md">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="appearance-none input input-idle bg-gray-800 text-white border-gray-600 rounded-md py-1 pl-2 focus:outline-none focus:ring-0 focus:border-gray-600"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-
-                <div className="pointer-events-none inset-y-0 flex pl-5 sm:pl-0 items-center text-white/70">
-                  <FiChevronDown size={16} />
-                </div>
-              </div>
-
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="btn-primary btn-primary-orange flex items-center justify-center min-w-40 gap-2 border-2 border-white rounded-md px-2 text-white"
+        {/* Clothes Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {filteredClothes.map((item) => (
+            <div
+              key={item.id}
+              className="bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-xl overflow-hidden cursor-pointer hover:border-[rgba(196,162,101,0.35)] transition-all relative"
+            >
+              {/* Selection checkbox */}
+              <div
+                className="absolute top-2 right-2 z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSelection(item.id);
+                }}
               >
-                <IoAdd size={16} />
-                Add Clothes
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Content based on active tab */}
-        {activeTab === "myWardrobe" && (
-          <>
-            {/* Clothes Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-10">
-              {filteredClothes.map((item) => (
                 <div
-                  key={item.id}
-                  onClick={() => handleItemClick(item)}
-                  className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-[#FE7743] transition-all"
+                  className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                    selectedForDeletion.has(item.id)
+                      ? "bg-[#C4A265] border-[#C4A265]"
+                      : "border-[rgba(196,162,101,0.3)] bg-[#1a0508]"
+                  }`}
                 >
-                  <div className="aspect-square bg-gray-700">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <h3 className="text-white font-medium text-sm truncate">
-                      {item.name}
-                    </h3>
-                    <p className="text-gray-400 text-xs">{item.brand}</p>
-                    <div className="flex gap-1 mt-2 flex-wrap">
-                      <span className="text-xs bg-[#273F4F] text-white px-2 py-0.5 rounded">
-                        {item.rawCategory || item.category}
-                      </span>
-                      <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded">
-                        {item.color}
-                      </span>
-                    </div>
+                  {selectedForDeletion.has(item.id) && (
+                    <div className="w-3 h-3 bg-[#1a0508] rounded-sm" />
+                  )}
+                </div>
+              </div>
+
+              <div onClick={() => handleItemClick(item)}>
+                <div className="aspect-square bg-[#2a0a10]">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="p-3">
+                  <h3 className="text-[#F5EDE3] font-medium text-sm truncate">
+                    {item.name}
+                  </h3>
+                  <p className="text-[rgba(245,237,227,0.4)] text-xs">
+                    {item.brand}
+                  </p>
+                  <div className="flex gap-1 mt-2 flex-wrap">
+                    <span className="text-xs bg-[#34020E] text-[rgba(245,237,227,0.6)] px-2 py-0.5 rounded">
+                      {item.category}
+                    </span>
+                    <span className="text-xs bg-[#0f0204] text-[rgba(245,237,227,0.6)] px-2 py-0.5 rounded">
+                      {item.color}
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {activeTab === "buy" && (
-          <>
-            {/* Suggestions to Buy Section */}
-            <div className="mb-10">
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Suggested to Buy
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {buySuggestions.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-gray-800 rounded-xl overflow-hidden"
-                  >
-                    <div className="aspect-square bg-gray-700">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-3">
-                      <h3 className="text-white font-medium text-sm truncate">
-                        {item.name}
-                      </h3>
-                      <p className="text-gray-400 text-xs">{item.brand}</p>
-                      <p className="text-[#FE7743] font-bold text-sm mt-1">
-                        {item.price}
-                      </p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        {item.reason}
-                      </p>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
-          </>
-        )}
-
-        {activeTab === "sell" && (
-          <>
-            {/* Suggestions to Sell Section */}
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-4">
-                Suggested to Sell
-              </h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {sellSuggestions.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-gray-800 rounded-xl overflow-hidden"
-                  >
-                    <div className="aspect-square bg-gray-700">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-3">
-                      <h3 className="text-white font-medium text-sm truncate">
-                        {item.name}
-                      </h3>
-                      <p className="text-gray-400 text-xs">{item.brand}</p>
-                      <p className="text-green-500 font-bold text-sm mt-1">
-                        {item.price}
-                      </p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        {item.reason}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#34020E] rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Add Clothes</h2>
+              <h2 className="font-serif text-2xl text-[#F5EDE3] font-medium">
+                Add Clothes
+              </h2>
               <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="text-white hover:text-[#FE7743]"
+                onClick={() => !isUploading && setIsUploadModalOpen(false)}
+                disabled={isUploading}
+                className={`text-[rgba(245,237,227,0.5)] hover:text-[#C4A265] transition-colors ${
+                  isUploading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 <IoClose size={24} />
               </button>
             </div>
 
-            <div className="flex gap-4 mb-6">
-              <button
-                onClick={() => setUploadMethod("upload")}
-                className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                  uploadMethod === "upload"
-                    ? "bg-[#FE7743] text-black"
-                    : "bg-gray-700 text-white"
-                }`}
-              >
-                Upload Image
-              </button>
-              <button
-                onClick={() => setUploadMethod("search")}
-                className={`flex-1 py-3 rounded-lg font-medium transition-all ${
-                  uploadMethod === "search"
-                    ? "bg-[#FE7743] text-black"
-                    : "bg-gray-700 text-white"
-                }`}
-              >
-                Search Online
-              </button>
-            </div>
-
-            {uploadMethod === "upload" ? (
-              <label
-                onDragEnter={!isLoading ? handleDrag : undefined}
-                onDragLeave={!isLoading ? handleDrag : undefined}
-                onDragOver={!isLoading ? handleDrag : undefined}
-                onDrop={!isLoading ? handleDrop : undefined}
-                className={`border-2 border-dashed rounded-xl p-10 text-center transition-all block ${
-                  isLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                } ${dragActive ? "border-[#FE7743] bg-[#FE7743] bg-opacity-10" : "border-gray-600"}`}
-              >
-                <IoCloudUploadOutline
-                  size={48}
-                  className="mx-auto text-gray-400 mb-4"
-                />
-                <p className="text-white mb-2">
-                  Drag and drop your clothes images here
-                </p>
-                <p className="text-white text-sm mb-4">
-                  or click anywhere to browse — you can select multiple files
-                </p>
-                <div className="btn-primary btn-primary-orange inline-block text-white">
-                  Browse Files
+            <label
+              onDragEnter={!isUploading ? handleDrag : undefined}
+              onDragLeave={!isUploading ? handleDrag : undefined}
+              onDragOver={!isUploading ? handleDrag : undefined}
+              onDrop={!isUploading ? handleDrop : undefined}
+              className={`border-2 border-dashed rounded-xl p-10 text-center transition-all block ${
+                isUploading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              } ${
+                dragActive
+                  ? "border-[#C4A265] bg-[rgba(196,162,101,0.1)]"
+                  : "border-[rgba(196,162,101,0.14)]"
+              }`}
+            >
+              {isUploading ? (
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#C4A265] mb-4"></div>
+                  <p className="text-[#F5EDE3] mb-2">Uploading...</p>
+                  <p className="text-[rgba(245,237,227,0.5)] text-sm">
+                    Please wait while we upload your clothes
+                  </p>
                 </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled={isLoading}
-                  onChange={(e) =>
-                    e.target.files && handleFileUpload(e.target.files)
-                  }
-                  className="hidden"
-                />
-              </label>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <label className="text-white block mb-2">Brand</label>
-                  <input
-                    type="text"
-                    placeholder="Enter brand name"
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
+              ) : (
+                <>
+                  <IoCloudUploadOutline
+                    size={48}
+                    className="mx-auto text-[rgba(245,237,227,0.3)] mb-4"
                   />
-                </div>
-
-                <div>
-                  <label className="text-white block mb-2">Product Code</label>
-                  <input
-                    type="text"
-                    placeholder="Enter product code"
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
-                  />
-                </div>
-
-                <button
-                  onClick={!isLoading ? handleOnlineSearch : undefined}
-                  disabled={isLoading}
-                  className="btn-primary btn-primary-orange w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Search Online
-                </button>
-              </div>
-            )}
+                  <p className="text-[#F5EDE3] mb-2">
+                    Drag and drop your clothes images here
+                  </p>
+                  <p className="text-[rgba(245,237,227,0.5)] text-sm mb-4">
+                    or click anywhere to browse — you can select multiple files
+                  </p>
+                  <div className="inline-block bg-[#C4A265] text-[#1a0508] px-4 py-2 rounded-lg font-semibold text-sm">
+                    Browse Files
+                  </div>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                disabled={isUploading}
+                multiple
+                onChange={(e) =>
+                  e.target.files && handleFileUpload(e.target.files)
+                }
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
       )}
@@ -612,19 +511,21 @@ export default function Wardrobe() {
       {/* Detail/Edit Modal */}
       {isDetailModalOpen && editingItem && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#34020E] rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#1a0508] border border-[rgba(196,162,101,0.14)] rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Edit Clothes</h2>
+              <h2 className="font-serif text-2xl text-[#F5EDE3] font-medium">
+                Edit Clothes
+              </h2>
               <button
                 onClick={() => setIsDetailModalOpen(false)}
-                className="text-white hover:text-[#FE7743]"
+                className="text-[rgba(245,237,227,0.5)] hover:text-[#C4A265] transition-colors"
               >
                 <IoClose size={24} />
               </button>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="aspect-square bg-gray-700 rounded-xl overflow-hidden">
+              <div className="aspect-square bg-[#2a0a10] rounded-xl overflow-hidden border border-[rgba(196,162,101,0.08)]">
                 <img
                   src={editingItem.image}
                   alt={editingItem.name}
@@ -634,62 +535,61 @@ export default function Wardrobe() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-white block mb-2">Name</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Name
+                  </label>
                   <input
                     type="text"
                     value={editingItem.name}
                     onChange={(e) =>
                       setEditingItem({ ...editingItem, name: e.target.value })
                     }
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
+                    className="w-full bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg px-4 py-2 focus:outline-none focus:border-[rgba(196,162,101,0.4)]"
                   />
                 </div>
                 <div>
-                  <label className="text-white block mb-2">Brand</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Brand
+                  </label>
                   <input
                     type="text"
                     value={editingItem.brand}
                     onChange={(e) =>
                       setEditingItem({ ...editingItem, brand: e.target.value })
                     }
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
+                    className="w-full bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg px-4 py-2 focus:outline-none focus:border-[rgba(196,162,101,0.4)]"
                   />
                 </div>
                 <div>
-                  <label className="text-white block mb-2">Product Code</label>
-                  <input
-                    type="text"
-                    value={editingItem.code}
-                    onChange={(e) =>
-                      setEditingItem({ ...editingItem, code: e.target.value })
-                    }
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-white block mb-2">Color</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Color
+                  </label>
                   <input
                     type="text"
                     value={editingItem.color}
                     onChange={(e) =>
                       setEditingItem({ ...editingItem, color: e.target.value })
                     }
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
+                    className="w-full bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg px-4 py-2 focus:outline-none focus:border-[rgba(196,162,101,0.4)]"
                   />
                 </div>
                 <div>
-                  <label className="text-white block mb-2">Style</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Style
+                  </label>
                   <input
                     type="text"
                     value={editingItem.style}
                     onChange={(e) =>
                       setEditingItem({ ...editingItem, style: e.target.value })
                     }
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
+                    className="w-full bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg px-4 py-2 focus:outline-none focus:border-[rgba(196,162,101,0.4)]"
                   />
                 </div>
                 <div>
-                  <label className="text-white block mb-2">Category</label>
+                  <label className="text-[#F5EDE3] block mb-2 text-sm">
+                    Category
+                  </label>
                   <select
                     value={editingItem.category}
                     onChange={(e) =>
@@ -698,12 +598,12 @@ export default function Wardrobe() {
                         category: e.target.value,
                       })
                     }
-                    className="input input-idle bg-gray-800 text-white border-gray-600"
+                    className="w-full bg-[#0f0204] text-[#F5EDE3] border border-[rgba(196,162,101,0.14)] rounded-lg px-4 py-2 focus:outline-none focus:border-[rgba(196,162,101,0.4)] appearance-none cursor-pointer"
                   >
                     {categories
                       .filter((c) => c !== "All")
                       .map((cat) => (
-                        <option key={cat} value={cat}>
+                        <option key={cat} value={cat} className="bg-[#0f0204]">
                           {cat}
                         </option>
                       ))}
@@ -715,15 +615,15 @@ export default function Wardrobe() {
             <div className="flex gap-4 mt-6">
               <button
                 onClick={handleSaveEdit}
-                className="btn-primary btn-primary-orange flex-1"
+                className="flex-1 bg-[#C4A265] text-[#1a0508] py-3 rounded-lg font-semibold hover:bg-[rgba(196,162,101,0.8)] transition-colors"
               >
                 Save Changes
               </button>
               <button
                 onClick={handleDelete}
-                className="btn-primary bg-red-600 hover:bg-red-700 text-white flex-1"
+                className="flex-1 bg-[#34020E] text-[#F5EDE3] py-3 rounded-lg font-semibold hover:bg-[#1a0508] transition-colors"
               >
-                <IoTrash size={20} className="inline mr-2" />
+                <IoTrash size={18} className="inline mr-2" />
                 Delete
               </button>
             </div>
