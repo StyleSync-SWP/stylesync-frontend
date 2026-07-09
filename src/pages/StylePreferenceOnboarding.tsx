@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import Menu from "../components/Menu";
+import { quizApi, type StyleProfileResult } from "../services/quizApi";
 
 type QuestionType =
   | "multi-select"
@@ -326,14 +327,30 @@ export default function StylePreferenceOnboarding() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [showOverview, setShowOverview] = useState(false);
+  const [result, setResult] = useState<StyleProfileResult | null>(null);
+  const [isLoadingResult, setIsLoadingResult] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const savedAnswers = localStorage.getItem("stylePreferenceAnswers");
     if (savedAnswers) {
       setAnswers(JSON.parse(savedAnswers));
       setShowOverview(true);
+      fetchResult();
     }
   }, []);
+
+  const fetchResult = async () => {
+    setIsLoadingResult(true);
+    try {
+      const data = await quizApi.getResult();
+      setResult(data);
+    } catch {
+      setResult(null);
+    } finally {
+      setIsLoadingResult(false);
+    }
+  };
 
   const getStepQuestions = (step: number) => {
     return QUESTIONS.filter((q) => q.section === STEPS[step]);
@@ -469,57 +486,31 @@ export default function StylePreferenceOnboarding() {
 
   const handleSubmit = async () => {
     localStorage.setItem("stylePreferenceAnswers", JSON.stringify(answers));
+    setShowOverview(true);
+    setIsSubmitting(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    Swal.fire({
-      title: "Style Profile Complete!",
-      html: `
-        <div style="text-align: center;">
-          <p style="color: #666; margin-bottom: 20px;">
-            Your style preferences have been saved successfully.
-          </p>
-          <div style="background: linear-gradient(135deg, #C4A265 0%, #e6c98a 100%);; 
-                      padding: 20px; 
-                      border-radius: 12px; 
-                      margin: 20px 0;
-                      box-shadow: 0 8px 32px rgba(196, 162, 101, 0.3);">
-            <p style="color: #1a0508; font-size: 14px; margin: 0; font-weight: 600;">
-              We'll now provide personalized outfit suggestions based on your unique style!
-            </p>
-          </div>
-          <p style="color: #999; font-size: 12px; margin-top: 15px;">
-            Tip: You can retake this quiz anytime to update your preferences.
-          </p>
-        </div>
-      `,
-      icon: "success",
-      iconColor: "#C4A265",
-      background: "#1a050a",
-      color: "#fff",
-      confirmButtonColor: "#C4A265",
-      confirmButtonText: "Go to Dashboard",
-      customClass: {
-        popup: "styled-popup",
-        title: "styled-title",
-      },
-      showClass: {
-        popup: "animate__animated animate__fadeInDown",
-      },
-      hideClass: {
-        popup: "animate__animated animate__fadeOutUp",
-      },
-    }).then((result) => {
-      if (result.isConfirmed) {
-        navigate("/dashboard");
-      }
-    });
+    try {
+      const data = await quizApi.submitQuiz(answers);
+      setResult(data);
+    } catch {
+      Swal.fire({
+        icon: "error",
+        title: "Couldn't calculate your style profile",
+        text: "Your answers were saved, but we couldn't reach the server. Please try again.",
+        confirmButtonColor: "#C4A265",
+        background: "#1a050a",
+        color: "#fff",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRetake = () => {
     setAnswers({});
     setCurrentStep(0);
     setShowOverview(false);
+    setResult(null);
     localStorage.removeItem("stylePreferenceAnswers");
   };
 
@@ -654,6 +645,80 @@ export default function StylePreferenceOnboarding() {
     }
   };
 
+  const renderResult = (profile: StyleProfileResult) => {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="flex gap-4 mb-8 justify-between">
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="px-8 py-4 bg-[#C4A265] text-[#1a0508] rounded-xl font-semibold
+                     hover:bg-[rgba(196,162,101,0.8)] transition-all"
+          >
+            Back to Dashboard
+          </button>
+          <button
+            onClick={handleRetake}
+            className="px-8 py-4 bg-[#0f0204] text-[#F5EDE3] rounded-xl font-semibold
+                     border border-[rgba(196,162,101,0.14)] hover:border-[rgba(196,162,101,0.35)] transition-all"
+          >
+            Retake Quiz
+          </button>
+        </div>
+
+        <div className="bg-[#1a0508] rounded-2xl p-8 border border-[rgba(196,162,101,0.14)] text-center">
+          <p className="text-xs text-[#C4A265] font-medium uppercase tracking-widest mb-2">
+            Your Style Identity
+          </p>
+          <h1 className="font-serif text-3xl text-[#F5EDE3] font-medium mb-4">
+            {profile.title}
+          </h1>
+          <p className="italic text-[rgba(245,237,227,0.6)] mb-6">
+            "{profile.tagline}"
+          </p>
+          <p className="text-[rgba(245,237,227,0.8)] leading-relaxed text-left">
+            {profile.description}
+          </p>
+
+          <div className="mt-8 text-left">
+            <h2 className="font-serif text-lg text-[#C4A265] font-medium mb-3">
+              Your Ultimate Color Palette
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {profile.color_palette.map((color) => (
+                <span
+                  key={color}
+                  className="px-4 py-2 rounded-full bg-[#0f0204] text-[#F5EDE3] text-sm border border-[rgba(196,162,101,0.35)]"
+                >
+                  {color}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 text-left">
+            <h2 className="font-serif text-lg text-[#C4A265] font-medium mb-3">
+              Your Keywords
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {profile.keywords.map((keyword) => (
+                <span
+                  key={keyword}
+                  className="px-4 py-2 rounded-full bg-[#C4A265] text-[#1a0508] text-sm font-medium"
+                >
+                  {keyword}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <p className="text-center text-[rgba(245,237,227,0.4)] text-sm mt-6">
+          Tip: You can retake this quiz anytime to update your style profile.
+        </p>
+      </div>
+    );
+  };
+
   const renderOverview = () => {
     const groupedAnswers = QUESTIONS.reduce(
       (acc, q) => {
@@ -737,7 +802,19 @@ export default function StylePreferenceOnboarding() {
     return (
       <div className="bg-[#0f0204] min-h-dvh">
         <Menu />
-        <div className="px-6 py-8">{renderOverview()}</div>
+        <div className="px-6 py-8">
+          {isLoadingResult || isSubmitting ? (
+            <div className="max-w-3xl mx-auto text-center py-24">
+              <p className="text-[#F5EDE3] text-lg font-medium">
+                Calculating your style profile...
+              </p>
+            </div>
+          ) : result ? (
+            renderResult(result)
+          ) : (
+            renderOverview()
+          )}
+        </div>
       </div>
     );
   }
@@ -806,10 +883,16 @@ export default function StylePreferenceOnboarding() {
           </button>
           <button
             onClick={handleNext}
-            className="px-8 py-4 bg-[#C4A265] text-[#1a0508] rounded-xl font-semibold 
-                     hover:bg-[rgba(196,162,101,0.8)] transition-all"
+            disabled={isSubmitting}
+            className="px-8 py-4 bg-[#C4A265] text-[#1a0508] rounded-xl font-semibold
+                     hover:bg-[rgba(196,162,101,0.8)] transition-all
+                     disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {currentStep === STEPS.length - 1 ? "Complete" : "Next"}
+            {currentStep === STEPS.length - 1
+              ? isSubmitting
+                ? "Saving..."
+                : "Complete"
+              : "Next"}
           </button>
         </div>
       </div>
