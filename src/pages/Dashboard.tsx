@@ -7,7 +7,7 @@ export default function Dashboard() {
   return (
     <div className="bg-[#0f0204] min-h-dvh">
       <Menu />
-      <div className="sm:px-10 px-4 py-10 max-w-[1360px] mx-auto mr-[-4px]">
+      <div className="sm:px-10 px-4 py-10 max-w-[1360px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[18px]">
           <Box
             title="Outfit Suggestions"

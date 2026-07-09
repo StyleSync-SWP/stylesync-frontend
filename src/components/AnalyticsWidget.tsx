@@ -249,7 +249,7 @@ export default function AnalyticsWidget() {
   if (colorData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-[#F5EDE3] text-center p-4">
-        <p className="text-sm font-medium mb-2">
+        <p className="text-sm font-serif font-medium mb-2">
           Upload clothes to see more data
         </p>
         <p className="text-xs text-[rgba(245,237,227,0.5)]">
