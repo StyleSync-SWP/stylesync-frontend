@@ -19,13 +19,20 @@ const handleResponse = async (response: Response) => {
   return response.json();
 };
 
+interface OutfitSuggestPayload {
+  query: string;
+  required_garment_ids?: string[];
+  exclude_garment_ids?: string[];
+}
+
 export const outfitApi = {
-  suggestOutfit: async (query: string) => {
+  suggestOutfit: async (payload: string | OutfitSuggestPayload) => {
+    const body = typeof payload === 'string' ? { query: payload } : payload;
     return apiRequest(async () => {
       const response = await fetch(`${API_URL}/outfits/suggest`, {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ query }),
+        body: JSON.stringify(body),
       });
       return handleResponse(response);
     });

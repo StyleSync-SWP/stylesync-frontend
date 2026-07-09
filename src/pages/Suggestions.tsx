@@ -233,7 +233,13 @@ export default function Suggestions() {
         query = `A ${dropdownValues.style} outfit for ${dropdownValues.occasion} in ${dropdownValues.weather} weather.${colorPart}`;
       }
 
-      const response = await outfitApi.suggestOutfit(query);
+      const response = await outfitApi.suggestOutfit({
+        query,
+        required_garment_ids:
+          selectedClothes.length > 0
+            ? selectedClothes.map((c) => c.id)
+            : undefined,
+      });
       setOriginalQuery(query);
 
       const outfits = Array.isArray(response) ? response : [response];
@@ -258,6 +264,7 @@ export default function Suggestions() {
       setTextInput("");
       setDropdownValues({ occasion: "", style: "", weather: "" });
       setSelectedColors([]);
+      setSelectedClothes([]);
     } catch (err) {
       console.error("Failed to get suggestion", err);
     }
